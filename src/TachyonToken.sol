@@ -16,12 +16,20 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 //      Current ECDSA is vulnerable to Shor's algorithm; plan migration to quantum-safe schemes (e.g., hash-based addresses or BLS aggregates).
 //      Keccak-256 hashing provides Grover resistance with sufficient output size. Avoid timestamp dependencies for security.
 //      Follows Consensys guidelines: simple logic, events for monitoring, role-based access, reentrancy guards implicit in OZ.
-contract TachyonToken is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, ERC20PausableUpgradeable, AccessControlUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
+contract TachyonToken is
+    Initializable,
+    ERC20Upgradeable,
+    ERC20BurnableUpgradeable,
+    ERC20PausableUpgradeable,
+    AccessControlUpgradeable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     // @dev Initial supply and decimals set for network economics (e.g., rewards in PoUW).
-    uint256 private constant INITIAL_SUPPLY = 10_000_000_000 * 10**18; // 10 billion tokens
+    uint256 private constant INITIAL_SUPPLY = 10_000_000_000 * 10 ** 18; // 10 billion tokens
 
     // Events for transparency and monitoring (Consensys best practice)
     event Minted(address indexed to, uint256 amount);
@@ -91,7 +99,10 @@ contract TachyonToken is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeab
     }
 
     // @dev Internal hook to enforce pause on transfers (from Pausable).
-    function _update(address from, address to, uint256 value) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
+    function _update(address from, address to, uint256 value)
+        internal
+        override(ERC20Upgradeable, ERC20PausableUpgradeable)
+    {
         super._update(from, to, value);
     }
 

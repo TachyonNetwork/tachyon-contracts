@@ -25,17 +25,11 @@ contract DeployTachyonToken is Script {
 
         // Encode initializer data for UUPS proxy
         address initialOwner = deployer; // Use actual deployer address
-        bytes memory initializerData = abi.encodeWithSelector(
-            TachyonToken.initialize.selector,
-            initialOwner
-        );
+        bytes memory initializerData = abi.encodeWithSelector(TachyonToken.initialize.selector, initialOwner);
 
         // Deploy ERC1967Proxy (UUPS-compatible proxy)
         // This is the correct proxy type for UUPS upgradeable contracts
-        ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation),
-            initializerData
-        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initializerData);
         console.log("TachyonToken Proxy deployed at:", address(proxy));
 
         // Verify proxy initialization and upgradability
@@ -45,7 +39,7 @@ contract DeployTachyonToken is Script {
         console.log("Total supply:", token.totalSupply());
         console.log("Decimals:", token.decimals());
         console.log("Initial owner:", token.owner());
-        
+
         // Verify UUPS upgradeability is working
         try token.proxiableUUID() returns (bytes32 uuid) {
             console.log("UUPS UUID (hex):", vm.toString(uuid));

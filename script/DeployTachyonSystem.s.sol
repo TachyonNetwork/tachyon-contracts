@@ -44,7 +44,7 @@ contract DeployTachyonSystem is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
-        
+
         vm.startBroadcast(deployerPrivateKey);
 
         // Configuration for Base Sepolia
@@ -53,64 +53,49 @@ contract DeployTachyonSystem is Script {
             chainlinkToken: 0x036CbD53842c5426634e7929541eC2318f3dCF7e, // Base Sepolia LINK
             chainlinkOracle: 0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD, // Base Sepolia Oracle
             chainlinkJobId: bytes32("7d80a6386ef543a3abb52817f6707e3b"), // Example job ID
-            chainlinkFee: 0.1 * 10**18, // 0.1 LINK
+            chainlinkFee: 0.1 * 10 ** 18, // 0.1 LINK
             zkVerifier: address(0) // Placeholder - will be deployed separately
         });
 
         DeployedContracts memory contracts = deployAllContracts(config);
-        
+
         // Initialize cross-contract dependencies
         initializeContractDependencies(contracts, config);
-        
+
         // Log deployment results
         logDeploymentResults(contracts);
-        
+
         vm.stopBroadcast();
     }
 
-    function deployAllContracts(DeploymentConfig memory config) 
-        internal 
-        returns (DeployedContracts memory contracts) 
-    {
+    function deployAllContracts(DeploymentConfig memory config) internal returns (DeployedContracts memory contracts) {
         console.log("=== Deploying Tachyon Network System ===");
-        
+
         // 1. Deploy TachyonToken
         console.log("Deploying TachyonToken...");
         TachyonToken tachyonImpl = new TachyonToken();
         contracts.tachyonTokenImpl = address(tachyonImpl);
-        
-        bytes memory tachyonInitData = abi.encodeWithSelector(
-            TachyonToken.initialize.selector,
-            config.initialOwner
-        );
-        
-        ERC1967Proxy tachyonProxy = new ERC1967Proxy(
-            address(tachyonImpl),
-            tachyonInitData
-        );
+
+        bytes memory tachyonInitData = abi.encodeWithSelector(TachyonToken.initialize.selector, config.initialOwner);
+
+        ERC1967Proxy tachyonProxy = new ERC1967Proxy(address(tachyonImpl), tachyonInitData);
         contracts.tachyonTokenProxy = address(tachyonProxy);
-        
+
         // 2. Deploy GreenVerifier
         console.log("Deploying GreenVerifier...");
         GreenVerifier greenImpl = new GreenVerifier();
         contracts.greenVerifierImpl = address(greenImpl);
-        
-        bytes memory greenInitData = abi.encodeWithSelector(
-            GreenVerifier.initialize.selector,
-            config.initialOwner
-        );
-        
-        ERC1967Proxy greenProxy = new ERC1967Proxy(
-            address(greenImpl),
-            greenInitData
-        );
+
+        bytes memory greenInitData = abi.encodeWithSelector(GreenVerifier.initialize.selector, config.initialOwner);
+
+        ERC1967Proxy greenProxy = new ERC1967Proxy(address(greenImpl), greenInitData);
         contracts.greenVerifierProxy = address(greenProxy);
-        
+
         // 3. Deploy AIOracle
         console.log("Deploying AIOracle...");
         AIOracle aiImpl = new AIOracle();
         contracts.aiOracleImpl = address(aiImpl);
-        
+
         bytes memory aiInitData = abi.encodeWithSelector(
             AIOracle.initialize.selector,
             config.chainlinkToken,
@@ -119,18 +104,15 @@ contract DeployTachyonSystem is Script {
             config.chainlinkFee,
             config.initialOwner
         );
-        
-        ERC1967Proxy aiProxy = new ERC1967Proxy(
-            address(aiImpl),
-            aiInitData
-        );
+
+        ERC1967Proxy aiProxy = new ERC1967Proxy(address(aiImpl), aiInitData);
         contracts.aiOracleProxy = address(aiProxy);
-        
+
         // 4. Deploy NodeRegistry
         console.log("Deploying NodeRegistry...");
         NodeRegistry nodeImpl = new NodeRegistry();
         contracts.nodeRegistryImpl = address(nodeImpl);
-        
+
         bytes memory nodeInitData = abi.encodeWithSelector(
             NodeRegistry.initialize.selector,
             contracts.tachyonTokenProxy,
@@ -138,18 +120,15 @@ contract DeployTachyonSystem is Script {
             contracts.aiOracleProxy,
             config.initialOwner
         );
-        
-        ERC1967Proxy nodeProxy = new ERC1967Proxy(
-            address(nodeImpl),
-            nodeInitData
-        );
+
+        ERC1967Proxy nodeProxy = new ERC1967Proxy(address(nodeImpl), nodeInitData);
         contracts.nodeRegistryProxy = address(nodeProxy);
-        
+
         // 5. Deploy RewardManager
         console.log("Deploying RewardManager...");
         RewardManager rewardImpl = new RewardManager();
         contracts.rewardManagerImpl = address(rewardImpl);
-        
+
         bytes memory rewardInitData = abi.encodeWithSelector(
             RewardManager.initialize.selector,
             contracts.tachyonTokenProxy,
@@ -158,18 +137,15 @@ contract DeployTachyonSystem is Script {
             config.zkVerifier,
             config.initialOwner
         );
-        
-        ERC1967Proxy rewardProxy = new ERC1967Proxy(
-            address(rewardImpl),
-            rewardInitData
-        );
+
+        ERC1967Proxy rewardProxy = new ERC1967Proxy(address(rewardImpl), rewardInitData);
         contracts.rewardManagerProxy = address(rewardProxy);
-        
+
         // 6. Deploy JobManager
         console.log("Deploying JobManager...");
         JobManager jobImpl = new JobManager();
         contracts.jobManagerImpl = address(jobImpl);
-        
+
         bytes memory jobInitData = abi.encodeWithSelector(
             JobManager.initialize.selector,
             contracts.tachyonTokenProxy,
@@ -178,46 +154,42 @@ contract DeployTachyonSystem is Script {
             contracts.greenVerifierProxy,
             config.initialOwner
         );
-        
-        ERC1967Proxy jobProxy = new ERC1967Proxy(
-            address(jobImpl),
-            jobInitData
-        );
+
+        ERC1967Proxy jobProxy = new ERC1967Proxy(address(jobImpl), jobInitData);
         contracts.jobManagerProxy = address(jobProxy);
-        
+
         return contracts;
     }
-    
-    function initializeContractDependencies(
-        DeployedContracts memory contracts,
-        DeploymentConfig memory config
-    ) internal {
+
+    function initializeContractDependencies(DeployedContracts memory contracts, DeploymentConfig memory config)
+        internal
+    {
         console.log("=== Initializing Contract Dependencies ===");
-        
+
         // Grant MINTER_ROLE to RewardManager for token minting
         TachyonToken tachyonToken = TachyonToken(payable(contracts.tachyonTokenProxy));
         tachyonToken.grantRole(tachyonToken.MINTER_ROLE(), contracts.rewardManagerProxy);
         console.log("Granted MINTER_ROLE to RewardManager");
-        
+
         // Grant AI_CONSUMER_ROLE to JobManager and NodeRegistry
         AIOracle aiOracle = AIOracle(contracts.aiOracleProxy);
         aiOracle.grantRole(aiOracle.AI_CONSUMER_ROLE(), contracts.jobManagerProxy);
         aiOracle.grantRole(aiOracle.AI_CONSUMER_ROLE(), contracts.nodeRegistryProxy);
         console.log("Granted AI_CONSUMER_ROLE to JobManager and NodeRegistry");
-        
+
         // Grant SLASHER_ROLE to RewardManager
         NodeRegistry nodeRegistry = NodeRegistry(contracts.nodeRegistryProxy);
         nodeRegistry.grantRole(nodeRegistry.SLASHER_ROLE(), contracts.rewardManagerProxy);
         console.log("Granted SLASHER_ROLE to RewardManager");
-        
+
         // Grant ORACLE_ROLE to deployer (temporary - should be energy providers)
         GreenVerifier greenVerifier = GreenVerifier(contracts.greenVerifierProxy);
         greenVerifier.grantRole(greenVerifier.ORACLE_ROLE(), config.initialOwner);
         console.log("Granted ORACLE_ROLE to deployer");
-        
+
         console.log("Contract dependencies initialized successfully");
     }
-    
+
     function logDeploymentResults(DeployedContracts memory contracts) internal {
         console.log("=== Deployment Results ===");
         console.log("TachyonToken Proxy:", contracts.tachyonTokenProxy);
@@ -232,41 +204,67 @@ contract DeployTachyonSystem is Script {
         console.log("RewardManager Implementation:", contracts.rewardManagerImpl);
         console.log("JobManager Proxy:", contracts.jobManagerProxy);
         console.log("JobManager Implementation:", contracts.jobManagerImpl);
-        
+
         // Save deployment info to JSON file
         string memory json = string.concat(
-            '{\n',
+            "{\n",
             '  "network": "base-sepolia",\n',
-            '  "timestamp": "', vm.toString(block.timestamp), '",\n',
+            '  "timestamp": "',
+            vm.toString(block.timestamp),
+            '",\n',
             '  "contracts": {\n',
             '    "TachyonToken": {\n',
-            '      "proxy": "', vm.toString(contracts.tachyonTokenProxy), '",\n',
-            '      "implementation": "', vm.toString(contracts.tachyonTokenImpl), '"\n',
-            '    },\n',
+            '      "proxy": "',
+            vm.toString(contracts.tachyonTokenProxy),
+            '",\n',
+            '      "implementation": "',
+            vm.toString(contracts.tachyonTokenImpl),
+            '"\n',
+            "    },\n",
             '    "GreenVerifier": {\n',
-            '      "proxy": "', vm.toString(contracts.greenVerifierProxy), '",\n',
-            '      "implementation": "', vm.toString(contracts.greenVerifierImpl), '"\n',
-            '    },\n',
+            '      "proxy": "',
+            vm.toString(contracts.greenVerifierProxy),
+            '",\n',
+            '      "implementation": "',
+            vm.toString(contracts.greenVerifierImpl),
+            '"\n',
+            "    },\n",
             '    "AIOracle": {\n',
-            '      "proxy": "', vm.toString(contracts.aiOracleProxy), '",\n',
-            '      "implementation": "', vm.toString(contracts.aiOracleImpl), '"\n',
-            '    },\n',
+            '      "proxy": "',
+            vm.toString(contracts.aiOracleProxy),
+            '",\n',
+            '      "implementation": "',
+            vm.toString(contracts.aiOracleImpl),
+            '"\n',
+            "    },\n",
             '    "NodeRegistry": {\n',
-            '      "proxy": "', vm.toString(contracts.nodeRegistryProxy), '",\n',
-            '      "implementation": "', vm.toString(contracts.nodeRegistryImpl), '"\n',
-            '    },\n',
+            '      "proxy": "',
+            vm.toString(contracts.nodeRegistryProxy),
+            '",\n',
+            '      "implementation": "',
+            vm.toString(contracts.nodeRegistryImpl),
+            '"\n',
+            "    },\n",
             '    "RewardManager": {\n',
-            '      "proxy": "', vm.toString(contracts.rewardManagerProxy), '",\n',
-            '      "implementation": "', vm.toString(contracts.rewardManagerImpl), '"\n',
-            '    },\n',
+            '      "proxy": "',
+            vm.toString(contracts.rewardManagerProxy),
+            '",\n',
+            '      "implementation": "',
+            vm.toString(contracts.rewardManagerImpl),
+            '"\n',
+            "    },\n",
             '    "JobManager": {\n',
-            '      "proxy": "', vm.toString(contracts.jobManagerProxy), '",\n',
-            '      "implementation": "', vm.toString(contracts.jobManagerImpl), '"\n',
-            '    }\n',
-            '  }\n',
-            '}'
+            '      "proxy": "',
+            vm.toString(contracts.jobManagerProxy),
+            '",\n',
+            '      "implementation": "',
+            vm.toString(contracts.jobManagerImpl),
+            '"\n',
+            "    }\n",
+            "  }\n",
+            "}"
         );
-        
+
         vm.writeFile("deployments.json", json);
         console.log("Deployment info saved to deployments.json");
     }

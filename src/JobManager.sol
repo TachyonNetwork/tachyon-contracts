@@ -17,13 +17,13 @@ import "./GreenVerifier.sol";
 // @dev Consensys best practices: upgradeable, modular, access controlled, comprehensive events
 //      Revolutionary features: AI-optimized job routing, green node prioritization, dynamic pricing
 //      UUPS upgradeable for future enhancements (quantum-resistant algorithms, new AI models)
-contract JobManager is 
-    Initializable, 
-    AccessControlUpgradeable, 
-    OwnableUpgradeable, 
-    ReentrancyGuardUpgradeable, 
-    PausableUpgradeable, 
-    UUPSUpgradeable 
+contract JobManager is
+    Initializable,
+    AccessControlUpgradeable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable,
+    UUPSUpgradeable
 {
     bytes32 public constant JOB_CREATOR_ROLE = keccak256("JOB_CREATOR_ROLE");
     bytes32 public constant JOB_VALIDATOR_ROLE = keccak256("JOB_VALIDATOR_ROLE");
@@ -125,25 +125,9 @@ contract JobManager is
     mapping(JobType => uint256[]) public jobTypeQueues;
 
     // Events (Consensys: comprehensive event logging)
-    event JobCreated(
-        uint256 indexed jobId, 
-        address indexed client, 
-        JobType jobType, 
-        uint256 payment,
-        bool preferGreen
-    );
-    event JobAssigned(
-        uint256 indexed jobId, 
-        address indexed node, 
-        uint256 aiScore,
-        uint256 greenMultiplier
-    );
-    event JobCompleted(
-        uint256 indexed jobId, 
-        address indexed node, 
-        bytes32 resultHash,
-        uint256 duration
-    );
+    event JobCreated(uint256 indexed jobId, address indexed client, JobType jobType, uint256 payment, bool preferGreen);
+    event JobAssigned(uint256 indexed jobId, address indexed node, uint256 aiScore, uint256 greenMultiplier);
+    event JobCompleted(uint256 indexed jobId, address indexed node, bytes32 resultHash, uint256 duration);
     event JobCancelled(uint256 indexed jobId, address indexed client, string reason);
     event DynamicPricingCalculated(uint256 indexed jobId, DynamicPricing pricing);
     event AIOptimizationApplied(uint256 indexed jobId, address[] recommendedNodes);
@@ -184,7 +168,7 @@ contract JobManager is
 
         // Initialize configuration
         nextJobId = 1;
-        minJobPayment = 10 * 10**18; // 10 TACH minimum
+        minJobPayment = 10 * 10 ** 18; // 10 TACH minimum
         maxJobDuration = 24 hours;
         jobAssignmentTimeout = 1 hours;
     }
@@ -207,10 +191,7 @@ contract JobManager is
         require(requirements.estimatedDurationMinutes > 0, "Duration required");
 
         // Transfer payment to contract
-        require(
-            tachyonToken.transferFrom(msg.sender, address(this), payment),
-            "Payment transfer failed"
-        );
+        require(tachyonToken.transferFrom(msg.sender, address(this), payment), "Payment transfer failed");
 
         jobId = nextJobId++;
         bytes32 dataHash = keccak256(abi.encodePacked(jobId, msg.sender, ipfsHash));
@@ -261,25 +242,22 @@ contract JobManager is
 
         // Get AI-recommended nodes
         address[] memory suitableNodes = nodeRegistry.getNodesForTask(
-            job.requirements.minCpuCores,
-            job.requirements.minRamGB,
-            job.requirements.requiresGPU,
-            job.preferGreenNodes
+            job.requirements.minCpuCores, job.requirements.minRamGB, job.requirements.requiresGPU, job.preferGreenNodes
         );
 
         require(suitableNodes.length > 0, "No suitable nodes available");
 
         // Calculate dynamic pricing with AI predictions
         DynamicPricing memory pricing = _calculateDynamicPricing(jobId, job);
-        
+
         // Select optimal node using AI and green preferences
         address selectedNode = _selectOptimalNode(jobId, suitableNodes, job.preferGreenNodes);
-        
+
         // Assign job
         job.assignedNode = selectedNode;
         job.assignedAt = block.timestamp;
         job.status = JobStatus.ASSIGNED;
-        
+
         nodeJobs[selectedNode].push(jobId);
 
         // Get metrics for event
@@ -288,18 +266,18 @@ contract JobManager is
 
         emit JobAssigned(jobId, selectedNode, aiScore, greenMultiplier);
         emit DynamicPricingCalculated(jobId, pricing);
-        
+
         if (job.preferGreenNodes && greenVerifier.isNodeGreen(selectedNode)) {
             emit GreenNodePrioritized(jobId, selectedNode);
         }
     }
 
     // @notice Complete a job with result submission
-    function completeJob(
-        uint256 jobId,
-        bytes32 resultHash,
-        string calldata resultIpfsHash
-    ) external whenNotPaused nonReentrant {
+    function completeJob(uint256 jobId, bytes32 resultHash, string calldata resultIpfsHash)
+        external
+        whenNotPaused
+        nonReentrant
+    {
         Job storage job = jobs[jobId];
         require(job.assignedNode == msg.sender, "Not assigned to caller");
         require(job.status == JobStatus.ASSIGNED || job.status == JobStatus.IN_PROGRESS, "Invalid status");
@@ -322,10 +300,7 @@ contract JobManager is
     // @notice Cancel a job (by client or admin)
     function cancelJob(uint256 jobId, string calldata reason) external {
         Job storage job = jobs[jobId];
-        require(
-            msg.sender == job.client || hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
-            "Unauthorized to cancel"
-        );
+        require(msg.sender == job.client || hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Unauthorized to cancel");
         require(job.status == JobStatus.CREATED || job.status == JobStatus.ASSIGNED, "Cannot cancel");
 
         job.status = JobStatus.CANCELLED;
@@ -339,7 +314,7 @@ contract JobManager is
     // @notice Get AI-optimized job recommendations for a node
     function getRecommendedJobs(address node) external view returns (uint256[] memory recommendedJobs) {
         // Get node capabilities and scores
-        (NodeRegistry.NodeInfo memory nodeInfo, uint256 greenMultiplier, uint256 aiScore) = 
+        (NodeRegistry.NodeInfo memory nodeInfo, uint256 greenMultiplier, uint256 aiScore) =
             nodeRegistry.getNodeDetails(node);
 
         // Filter jobs based on node capabilities, green preference, and AI score
@@ -349,11 +324,12 @@ contract JobManager is
         for (uint256 i = 0; i < priorityQueue.length; i++) {
             uint256 jobId = priorityQueue[i];
             Job memory job = jobs[jobId];
-            
+
             if (job.status == JobStatus.CREATED && _isNodeSuitable(job, nodeInfo)) {
                 // Prioritize green jobs for green nodes and high AI score nodes
                 bool isPreferred = (job.preferGreenNodes && greenMultiplier > 100) || aiScore > 75;
-                if (isPreferred || count < 5) { // Always include first 5 suitable jobs
+                if (isPreferred || count < 5) {
+                    // Always include first 5 suitable jobs
                     temp[count] = jobId;
                     count++;
                 }
@@ -369,18 +345,16 @@ contract JobManager is
     }
 
     // @notice Get comprehensive job statistics
-    function getJobStatistics() external view returns (
-        uint256 total,
-        uint256 completed,
-        uint256 active,
-        uint256 completionRate,
-        uint256 avgGreenJobs
-    ) {
+    function getJobStatistics()
+        external
+        view
+        returns (uint256 total, uint256 completed, uint256 active, uint256 completionRate, uint256 avgGreenJobs)
+    {
         total = totalJobsCreated;
         completed = totalJobsCompleted;
         active = total - completed;
         completionRate = total > 0 ? (completed * 100) / total : 0;
-        
+
         // Calculate green job percentage
         uint256 greenJobCount = 0;
         for (uint256 i = 1; i < nextJobId; i++) {
@@ -397,52 +371,44 @@ contract JobManager is
         if (priority == Priority.HIGH || priority == Priority.CRITICAL) {
             priorityQueue.push(jobId);
         }
-        
+
         if (preferGreen) {
             greenPreferredQueue.push(jobId);
         }
-        
+
         jobTypeQueues[jobType].push(jobId);
     }
 
     function _requestAIOptimization(uint256 jobId) internal {
         Job memory job = jobs[jobId];
-        
+
         // Prepare input data for AI oracle
-        bytes memory inputData = abi.encode(
-            job.jobType,
-            job.requirements,
-            job.priority,
-            job.preferGreenNodes,
-            job.deadline
-        );
+        bytes memory inputData =
+            abi.encode(job.jobType, job.requirements, job.priority, job.preferGreenNodes, job.deadline);
 
         // Request AI prediction for optimal node selection
-        aiOracle.requestPrediction(
-            AIOracle.PredictionType.NODE_SELECTION,
-            bytes32(jobId),
-            inputData
-        );
+        aiOracle.requestPrediction(AIOracle.PredictionType.NODE_SELECTION, bytes32(jobId), inputData);
     }
 
-    function _calculateDynamicPricing(uint256 /* jobId */, Job memory job) internal view returns (DynamicPricing memory) {
+    function _calculateDynamicPricing(uint256, /* jobId */ Job memory job)
+        internal
+        view
+        returns (DynamicPricing memory)
+    {
         uint256 basePrice = job.payment;
-        
+
         // Get demand prediction from AI oracle
-        (uint256 demandScore, uint256 confidence) = aiOracle.getDemandForecast(
-            keccak256(abi.encodePacked(job.jobType))
-        );
-        
+        (uint256 demandScore, uint256 confidence) = aiOracle.getDemandForecast(keccak256(abi.encodePacked(job.jobType)));
+
         // Adjust demand multiplier based on confidence
         uint256 confidenceAdjustment = confidence < 50 ? 100 : 100 + (confidence - 50) / 10;
         uint256 demandMultiplier = (100 + (demandScore * 50) / 100) * confidenceAdjustment / 100;
-        uint256 urgencyMultiplier = job.priority == Priority.CRITICAL ? 150 : 
-                                   job.priority == Priority.HIGH ? 125 : 100;
-        
+        uint256 urgencyMultiplier = job.priority == Priority.CRITICAL ? 150 : job.priority == Priority.HIGH ? 125 : 100;
+
         uint256 greenBonus = job.preferGreenNodes ? 110 : 100; // 10% bonus for green preference
-        
+
         uint256 finalPrice = (basePrice * demandMultiplier * urgencyMultiplier * greenBonus) / (100 * 100 * 100);
-        
+
         return DynamicPricing({
             basePrice: basePrice,
             demandMultiplier: demandMultiplier,
@@ -452,63 +418,60 @@ contract JobManager is
         });
     }
 
-    function _selectOptimalNode(
-        uint256 jobId, 
-        address[] memory suitableNodes, 
-        bool preferGreen
-    ) internal returns (address) {
+    function _selectOptimalNode(uint256 jobId, address[] memory suitableNodes, bool preferGreen)
+        internal
+        returns (address)
+    {
         uint256 bestScore = 0;
         address bestNode = suitableNodes[0];
-        
+
         for (uint256 i = 0; i < suitableNodes.length; i++) {
             address node = suitableNodes[i];
             uint256 score = _calculateNodeScore(node, preferGreen);
-            
+
             if (score > bestScore) {
                 bestScore = score;
                 bestNode = node;
             }
         }
-        
+
         // Emit AI optimization event
         emit AIOptimizationApplied(jobId, suitableNodes);
-        
+
         return bestNode;
     }
 
     function _calculateNodeScore(address node, bool preferGreen) internal view returns (uint256) {
         uint256 aiScore = aiOracle.nodeScores(node);
         uint256 greenMultiplier = greenVerifier.getRewardMultiplier(node);
-        
-        (NodeRegistry.NodeInfo memory nodeInfo,, ) = nodeRegistry.getNodeDetails(node);
+
+        (NodeRegistry.NodeInfo memory nodeInfo,,) = nodeRegistry.getNodeDetails(node);
         uint256 reputationScore = nodeInfo.reputation;
-        
+
         uint256 totalScore = (aiScore * 40 + reputationScore * 30 + greenMultiplier * 30) / 100;
-        
+
         // Bonus for green nodes if preferred
         if (preferGreen && greenVerifier.isNodeGreen(node)) {
             totalScore = (totalScore * 120) / 100; // 20% bonus
         }
-        
+
         return totalScore;
     }
 
     function _isNodeSuitable(Job memory job, NodeRegistry.NodeInfo memory node) internal pure returns (bool) {
-        return node.capabilities.cpuCores >= job.requirements.minCpuCores &&
-               node.capabilities.ramGB >= job.requirements.minRamGB &&
-               node.capabilities.storageGB >= job.requirements.minStorageGB &&
-               (!job.requirements.requiresGPU || node.capabilities.hasGPU) &&
-               (job.requirements.requiresGPU ? 
-                node.capabilities.gpuMemoryGB >= job.requirements.minGpuMemoryGB : true);
+        return node.capabilities.cpuCores >= job.requirements.minCpuCores
+            && node.capabilities.ramGB >= job.requirements.minRamGB
+            && node.capabilities.storageGB >= job.requirements.minStorageGB
+            && (!job.requirements.requiresGPU || node.capabilities.hasGPU)
+            && (job.requirements.requiresGPU ? node.capabilities.gpuMemoryGB >= job.requirements.minGpuMemoryGB : true);
     }
 
     // Admin functions
 
-    function updateConfiguration(
-        uint256 _minJobPayment,
-        uint256 _maxJobDuration,
-        uint256 _jobAssignmentTimeout
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateConfiguration(uint256 _minJobPayment, uint256 _maxJobDuration, uint256 _jobAssignmentTimeout)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         minJobPayment = _minJobPayment;
         maxJobDuration = _maxJobDuration;
         jobAssignmentTimeout = _jobAssignmentTimeout;

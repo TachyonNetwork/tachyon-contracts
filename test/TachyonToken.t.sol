@@ -26,7 +26,7 @@ contract TachyonTokenTest is Test {
 
     function testMint() public {
         vm.prank(owner);
-        token.mint(user, 1000 * 10**18);
-        assertEq(token.balanceOf(user), 1000 * 10**18);
+        token.mint(user, 1000 * 10 ** 18);
+        assertEq(token.balanceOf(user), 1000 * 10 ** 18);
     }
 }

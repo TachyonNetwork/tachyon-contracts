@@ -16,13 +16,13 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 // @dev Uses Chainlink oracles to fetch AI predictions for task distribution, demand forecasting, and node selection
 //      This revolutionary feature enables the network to self-optimize based on ML models running off-chain
 //      AI agents analyze historical data and predict optimal resource allocation, making PoUW "intelligent"
-contract AIOracle is 
-    Initializable, 
-    ChainlinkClient, 
-    AccessControlUpgradeable, 
-    OwnableUpgradeable, 
-    PausableUpgradeable, 
-    UUPSUpgradeable 
+contract AIOracle is
+    Initializable,
+    ChainlinkClient,
+    AccessControlUpgradeable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    UUPSUpgradeable
 {
     using Chainlink for Chainlink.Request;
 
@@ -36,11 +36,12 @@ contract AIOracle is
 
     // AI prediction types
     enum PredictionType {
-        TASK_DEMAND,        // Predict future task demand
-        NODE_SELECTION,     // Optimal node for a task
-        RESOURCE_PRICING,   // Dynamic pricing based on demand
-        LATENCY_FORECAST,   // Network latency predictions
-        ENERGY_EFFICIENCY   // Energy-optimal task routing
+        TASK_DEMAND, // Predict future task demand
+        NODE_SELECTION, // Optimal node for a task
+        RESOURCE_PRICING, // Dynamic pricing based on demand
+        LATENCY_FORECAST, // Network latency predictions
+        ENERGY_EFFICIENCY // Energy-optimal task routing
+
     }
 
     // Prediction data structure
@@ -48,13 +49,13 @@ contract AIOracle is
         uint256 timestamp;
         PredictionType predictionType;
         bytes32 taskId;
-        uint256 confidence;  // 0-100 confidence score
-        bytes data;          // Encoded prediction data
+        uint256 confidence; // 0-100 confidence score
+        bytes data; // Encoded prediction data
     }
 
     // Storage for predictions
     mapping(bytes32 => Prediction) public predictions;
-    mapping(address => uint256) public nodeScores;  // AI-computed node efficiency scores
+    mapping(address => uint256) public nodeScores; // AI-computed node efficiency scores
 
     // Events
     event PredictionRequested(bytes32 indexed requestId, PredictionType predictionType, bytes32 taskId);
@@ -67,18 +68,15 @@ contract AIOracle is
         _disableInitializers();
     }
 
-    function initialize(
-        address _link,
-        address _oracle,
-        bytes32 _jobId,
-        uint256 _fee,
-        address initialOwner
-    ) public initializer {
+    function initialize(address _link, address _oracle, bytes32 _jobId, uint256 _fee, address initialOwner)
+        public
+        initializer
+    {
         __AccessControl_init();
         __Ownable_init(initialOwner);
         __Pausable_init();
         __UUPSUpgradeable_init();
-        
+
         _setChainlinkToken(_link);
         oracle = _oracle;
         jobId = _jobId;
@@ -92,16 +90,13 @@ contract AIOracle is
     // @param predictionType Type of prediction needed
     // @param taskId Task identifier for context
     // @param inputData Additional context data for AI model
-    function requestPrediction(
-        PredictionType predictionType,
-        bytes32 taskId,
-        bytes calldata inputData
-    ) external onlyRole(AI_CONSUMER_ROLE) whenNotPaused returns (bytes32 requestId) {
-        Chainlink.Request memory req = _buildChainlinkRequest(
-            jobId,
-            address(this),
-            this.fulfillPrediction.selector
-        );
+    function requestPrediction(PredictionType predictionType, bytes32 taskId, bytes calldata inputData)
+        external
+        onlyRole(AI_CONSUMER_ROLE)
+        whenNotPaused
+        returns (bytes32 requestId)
+    {
+        Chainlink.Request memory req = _buildChainlinkRequest(jobId, address(this), this.fulfillPrediction.selector);
 
         // Set request parameters for AI service
         req._add("predictionType", uint2str(uint256(predictionType)));
@@ -110,18 +105,17 @@ contract AIOracle is
         req._add("network", "tachyon");
 
         requestId = _sendChainlinkRequestTo(oracle, req, fee);
-        
+
         emit PredictionRequested(requestId, predictionType, taskId);
         return requestId;
     }
 
     // @notice Fulfill prediction from oracle
     // @dev Called by Chainlink oracle with AI prediction results
-    function fulfillPrediction(
-        bytes32 requestId,
-        uint256 confidence,
-        bytes memory predictionData
-    ) public recordChainlinkFulfillment(requestId) {
+    function fulfillPrediction(bytes32 requestId, uint256 confidence, bytes memory predictionData)
+        public
+        recordChainlinkFulfillment(requestId)
+    {
         predictions[requestId] = Prediction({
             timestamp: block.timestamp,
             predictionType: PredictionType.NODE_SELECTION, // Default, should be passed
@@ -140,34 +134,33 @@ contract AIOracle is
     // @param taskRequirements Encoded task requirements
     // @return nodes Array of optimal node addresses
     // @return scores Efficiency scores for each node
-    function getOptimalNodes(
-        bytes calldata /* taskRequirements */
-    ) external view returns (address[] memory nodes, uint256[] memory scores) {
+    function getOptimalNodes(bytes calldata /* taskRequirements */ )
+        external
+        view
+        returns (address[] memory nodes, uint256[] memory scores)
+    {
         uint256 maxResults = 10;
         nodes = new address[](maxResults);
         scores = new uint256[](maxResults);
-        
+
         return (nodes, scores);
     }
 
     // @notice Update node efficiency score based on AI analysis
     // @dev Only callable by oracle or authorized contracts
-    function updateNodeScore(
-        address node,
-        uint256 score
-    ) external onlyRole(ORACLE_MANAGER_ROLE) {
+    function updateNodeScore(address node, uint256 score) external onlyRole(ORACLE_MANAGER_ROLE) {
         require(score <= 100, "Score must be 0-100");
         nodeScores[node] = score;
         emit NodeScoreUpdated(node, score);
     }
 
     // @notice Batch update node scores from AI analysis
-    function batchUpdateNodeScores(
-        address[] calldata nodes,
-        uint256[] calldata scores
-    ) external onlyRole(ORACLE_MANAGER_ROLE) {
+    function batchUpdateNodeScores(address[] calldata nodes, uint256[] calldata scores)
+        external
+        onlyRole(ORACLE_MANAGER_ROLE)
+    {
         require(nodes.length == scores.length, "Array length mismatch");
-        
+
         for (uint256 i = 0; i < nodes.length; i++) {
             require(scores[i] <= 100, "Score must be 0-100");
             nodeScores[nodes[i]] = scores[i];
@@ -179,20 +172,18 @@ contract AIOracle is
     // @param taskType Type of computational task
     // @return demandScore Predicted demand (0-100 scale)
     // @return confidence Confidence in prediction
-    function getDemandForecast(
-        bytes32 /* taskType */
-    ) external view returns (uint256 demandScore, uint256 confidence) {
-        demandScore = 50; 
+    function getDemandForecast(bytes32 /* taskType */ )
+        external
+        view
+        returns (uint256 demandScore, uint256 confidence)
+    {
+        demandScore = 50;
         confidence = 80;
         return (demandScore, confidence);
     }
 
     // @notice Update oracle configuration
-    function updateOracleConfig(
-        address _oracle,
-        bytes32 _jobId,
-        uint256 _fee
-    ) external onlyRole(ORACLE_MANAGER_ROLE) {
+    function updateOracleConfig(address _oracle, bytes32 _jobId, uint256 _fee) external onlyRole(ORACLE_MANAGER_ROLE) {
         oracle = _oracle;
         jobId = _jobId;
         fee = _fee;

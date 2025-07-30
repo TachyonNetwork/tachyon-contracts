@@ -15,12 +15,12 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 // @dev Integrates with real-world energy data oracles to incentivize sustainable computing
 //      Revolutionary feature: Creates the first DePIN network that actively rewards green energy usage
 //      Nodes using renewable energy get reward multipliers and priority in task assignment
-contract GreenVerifier is 
+contract GreenVerifier is
     Initializable,
-    AccessControlUpgradeable, 
+    AccessControlUpgradeable,
     OwnableUpgradeable,
-    PausableUpgradeable, 
-    UUPSUpgradeable 
+    PausableUpgradeable,
+    UUPSUpgradeable
 {
     // Using ECDSA library directly
 
@@ -31,17 +31,17 @@ contract GreenVerifier is
     struct GreenCertificate {
         uint256 timestamp;
         uint256 energySourceType; // 1: Solar, 2: Wind, 3: Hydro, 4: Other renewable
-        uint256 percentage;       // Percentage of renewable energy (0-100)
-        uint256 validUntil;      // Certificate expiration
+        uint256 percentage; // Percentage of renewable energy (0-100)
+        uint256 validUntil; // Certificate expiration
         bytes32 certificateHash; // Hash of external certificate (e.g., from energy provider)
         bool verified;
     }
 
     // Energy tracking struct
     struct EnergyMetrics {
-        uint256 totalEnergyConsumed;    // In watt-hours
-        uint256 renewableEnergyUsed;    // In watt-hours
-        uint256 carbonOffsetTons;       // Carbon offset in tons
+        uint256 totalEnergyConsumed; // In watt-hours
+        uint256 renewableEnergyUsed; // In watt-hours
+        uint256 carbonOffsetTons; // Carbon offset in tons
         uint256 lastUpdateTimestamp;
     }
 
@@ -52,11 +52,11 @@ contract GreenVerifier is
 
     // Oracle configuration for energy data
     mapping(uint256 => AggregatorV3Interface) public energyDataFeeds;
-    
+
     // Reward multipliers based on green percentage
     uint256 public constant BASE_MULTIPLIER = 100; // 1x in basis points
     uint256 public constant MAX_GREEN_MULTIPLIER = 200; // 2x max multiplier
-    
+
     // Carbon credit integration
     uint256 public totalCarbonOffsetTons;
     mapping(address => uint256) public nodeCarbonCredits;
@@ -98,9 +98,7 @@ contract GreenVerifier is
         require(energySourceType > 0 && energySourceType <= 4, "Invalid energy type");
 
         // Verify signature from authorized energy provider
-        bytes32 messageHash = keccak256(
-            abi.encodePacked(msg.sender, energySourceType, percentage, certificateData)
-        );
+        bytes32 messageHash = keccak256(abi.encodePacked(msg.sender, energySourceType, percentage, certificateData));
         address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(messageHash), signature);
         require(hasRole(ORACLE_ROLE, signer), "Invalid signature");
 
@@ -124,18 +122,20 @@ contract GreenVerifier is
         require(!cert.verified, "Already verified");
 
         cert.verified = approved;
-        
+
         if (approved) {
             // Update green score based on renewable percentage
             uint256 score = cert.percentage;
-            
+
             // Bonus points for certain energy types
-            if (cert.energySourceType == 1) { // Solar
+            if (cert.energySourceType == 1) {
+                // Solar
                 score = score * 110 / 100; // 10% bonus
-            } else if (cert.energySourceType == 2) { // Wind
+            } else if (cert.energySourceType == 2) {
+                // Wind
                 score = score * 105 / 100; // 5% bonus
             }
-            
+
             greenScores[node] = score > 100 ? 100 : score;
             emit GreenScoreUpdated(node, greenScores[node]);
         }
@@ -145,11 +145,10 @@ contract GreenVerifier is
 
     // @notice Update energy metrics for a node
     // @dev Called by oracles with real-time energy data
-    function updateEnergyMetrics(
-        address node,
-        uint256 totalEnergy,
-        uint256 renewableEnergy
-    ) external onlyRole(ORACLE_ROLE) {
+    function updateEnergyMetrics(address node, uint256 totalEnergy, uint256 renewableEnergy)
+        external
+        onlyRole(ORACLE_ROLE)
+    {
         require(renewableEnergy <= totalEnergy, "Invalid energy values");
 
         EnergyMetrics storage metrics = nodeEnergyMetrics[node];
@@ -176,14 +175,14 @@ contract GreenVerifier is
     // @return multiplier Reward multiplier in basis points (100 = 1x)
     function getRewardMultiplier(address node) external view returns (uint256 multiplier) {
         GreenCertificate memory cert = greenCertificates[node];
-        
+
         if (!cert.verified || block.timestamp > cert.validUntil) {
             return BASE_MULTIPLIER;
         }
 
         // Linear scaling: 0% renewable = 1x, 100% renewable = 2x
         multiplier = BASE_MULTIPLIER + (cert.percentage * (MAX_GREEN_MULTIPLIER - BASE_MULTIPLIER) / 100);
-        
+
         // Additional bonus for high green scores
         uint256 score = greenScores[node];
         if (score >= 90) {
@@ -202,15 +201,14 @@ contract GreenVerifier is
     }
 
     // @notice Get node's sustainability metrics
-    function getNodeSustainabilityMetrics(address node) external view returns (
-        uint256 greenScore,
-        uint256 renewablePercentage,
-        uint256 carbonOffsetTons,
-        bool isGreen
-    ) {
+    function getNodeSustainabilityMetrics(address node)
+        external
+        view
+        returns (uint256 greenScore, uint256 renewablePercentage, uint256 carbonOffsetTons, bool isGreen)
+    {
         GreenCertificate memory cert = greenCertificates[node];
         EnergyMetrics memory metrics = nodeEnergyMetrics[node];
-        
+
         greenScore = greenScores[node];
         renewablePercentage = cert.percentage;
         carbonOffsetTons = metrics.carbonOffsetTons;
