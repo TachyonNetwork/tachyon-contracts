@@ -1,0 +1,44 @@
+{
+  "chainId": 84532,
+  "chainName": "Base Sepolia", 
+  "deploymentDate": "2025-07-30",
+  "deployer": "0x7c17f9D9378a2aa5fB98BDc8E3b8aaF3c8eedd71",
+  "TachyonToken": {
+    "implementation": "0x953A8584C4ec41E1243b93DDdf2BFdf2a552BB5b",
+    "proxy": "0xf93056521b4EeB401fAB8784A8977CD47491De95",
+    "verified": true,
+    "owner": "0x7c17f9D9378a2aa5fB98BDc8E3b8aaF3c8eedd71",
+    "pattern": "UUPS",
+    "totalSupply": "10000000000000000000000000000",
+    "symbol": "TACH",
+    "name": "Tachyon Token",
+    "decimals": 18,
+    "description": "ERC20 utility token for Tachyon Network with 10B total supply and UUPS upgradeability",
+    "links": {
+      "proxy": "https://sepolia.basescan.org/address/0xf93056521b4EeB401fAB8784A8977CD47491De95#code",
+      "implementation": "https://sepolia.basescan.org/address/0x953A8584C4ec41E1243b93DDdf2BFdf2a552BB5b#code"
+    }
+  },
+  "NodeRegistry": {
+    "proxy": "0x5B71b4Ee99664bD986d741F617838b5e9988dCD1",
+    "implementation": "0x2e36816eD13a9C8DE8fF3c09FF2B636d20290841",
+    "verified": false,
+    "description": "Node registry with mobile device support and tiered staking"
+  },
+  "GreenVerifier": {
+    "proxy": "0x953A8584C4ec41E1243b93DDdf2BFdf2a552BB5b",
+    "implementation": "0x734B9d63ee76409F28386676e1746205193dd830"
+  },
+  "AIOracle": {
+    "proxy": "0xEBaf9130E8D94Ecb6b88AbEcf46F7B5B61CA231D", 
+    "implementation": "0xf93056521b4EeB401fAB8784A8977CD47491De95"
+  },
+  "RewardManager": {
+    "proxy": "0xB5C8DFEdA4BB05F4Addcb8608924e9af0BA6D129",
+    "implementation": "0x90B25A51c7d9693bb56B4964c5c4a32F7E94e025"
+  },
+  "JobManager": {
+    "proxy": "0x171b0c3b0e3766D7eA714eCAc4951589F6793507",
+    "implementation": "0xFa62d464be301ed9378312fc34d82B2121311fE8"
+  }
+}

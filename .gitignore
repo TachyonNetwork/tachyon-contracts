@@ -12,3 +12,73 @@ docs/
 
 # Dotenv file
 .env
+
+# Node modules (if any)
+node_modules/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage reports
+coverage/
+*.lcov
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Build artifacts
+build/
+dist/
+
+# Deployment artifacts (keep main deployments.json but ignore backups)
+deployments.json.bak
+*.backup
+
+# Documentation that shouldn't be in repo
+ARCHITECTURE_ANALYSIS.md
+CONSENSYS_UPGRADE_SUMMARY.md
+IMPORT_FIXES.md
+PRODUCTION_CHAINLINK_UPGRADE.md
+
+# Test artifacts
+test-failures/
+*.trace
+
+# PowerShell and shell scripts (temporary deployment scripts)
+*.ps1
+*.sh
+!scripts/*.sh
+
+# ABI files (auto-generated)
+*.abi.json
+
+# Contract verification files
+verify-*.txt
