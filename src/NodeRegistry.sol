@@ -125,9 +125,9 @@ contract NodeRegistry is
     mapping(NodeDeviceType => bool) public isServerDevice;
     mapping(NodeDeviceType => uint256) public deviceTypeCount;
 
-    uint256 public slashingPercentage = 10;
-    uint256 public inactivityThreshold = 7 days;
-    uint256 public mobilePowerSaveThreshold = 20;
+    uint256 public slashingPercentage;
+    uint256 public inactivityThreshold;
+    uint256 public mobilePowerSaveThreshold;
     uint256 public totalNodes;
     uint256 public totalStaked;
     uint256 public totalComputePower;
@@ -158,7 +158,9 @@ contract NodeRegistry is
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(ATTESTOR_ROLE, initialOwner);
 
-        // Set mobilePowerSaveThreshold
+        // Set configuration values
+        slashingPercentage = 10;
+        inactivityThreshold = 7 days;
         mobilePowerSaveThreshold = 20;
 
         // Compact device profile initialization - all required devices

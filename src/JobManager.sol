@@ -398,12 +398,16 @@ contract JobManager is
         uint256 basePrice = job.payment;
 
         // Get demand prediction from AI oracle
-        (uint256 demandScore, uint256 confidence) = aiOracle.getDemandForecast(keccak256(abi.encodePacked(job.jobType)));
+        (uint256 demandScore, uint256 urgency, uint256 confidence) = aiOracle.getDemandForecast(keccak256(abi.encodePacked(job.jobType)));
 
         // Adjust demand multiplier based on confidence
         uint256 confidenceAdjustment = confidence < 50 ? 100 : 100 + (confidence - 50) / 10;
         uint256 demandMultiplier = (100 + (demandScore * 50) / 100) * confidenceAdjustment / 100;
-        uint256 urgencyMultiplier = job.priority == Priority.CRITICAL ? 150 : job.priority == Priority.HIGH ? 125 : 100;
+        
+        // Combine job priority with AI urgency prediction
+        uint256 basePriorityMultiplier = job.priority == Priority.CRITICAL ? 150 : job.priority == Priority.HIGH ? 125 : 100;
+        uint256 aiUrgencyMultiplier = 100 + (urgency * 25) / 100; // 0-25% boost based on AI urgency
+        uint256 urgencyMultiplier = (basePriorityMultiplier * aiUrgencyMultiplier) / 100;
 
         uint256 greenBonus = job.preferGreenNodes ? 110 : 100; // 10% bonus for green preference
 

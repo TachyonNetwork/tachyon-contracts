@@ -10,14 +10,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./TachyonToken.sol";
 import "./GreenVerifier.sol";
 import "./AIOracle.sol";
-
-// Interface for ZK verifier (to be implemented with Circom/SnarkJS)
-interface IZKVerifier {
-    function verifyProof(uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[4] memory input)
-        external
-        view
-        returns (bool);
-}
+import "./interfaces/IZKVerifier.sol";
 
 // @title RewardManager
 // @notice Manages Proof of Useful Work (PoUW) validation and reward distribution with ZK-proofs

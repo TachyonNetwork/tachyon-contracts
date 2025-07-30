@@ -235,7 +235,7 @@ contract GreenVerifier is
     }
 
     // @notice Get top green nodes
-    function getTopGreenNodes(uint256 limit) external view returns (address[] memory nodes, uint256[] memory scores) {
+    function getTopGreenNodes(uint256 limit) external pure returns (address[] memory nodes, uint256[] memory scores) {
         nodes = new address[](limit);
         scores = new uint256[](limit);
         return (nodes, scores);
