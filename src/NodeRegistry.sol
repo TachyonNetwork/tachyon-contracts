@@ -158,26 +158,24 @@ contract NodeRegistry is
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(ATTESTOR_ROLE, initialOwner);
 
-        // Compact device profile initialization - only essential devices
+        // Set mobilePowerSaveThreshold 
+        mobilePowerSaveThreshold = 20;
+
+        // Compact device profile initialization - all required devices
         deviceProfiles[NodeDeviceType.SMARTPHONE] = DeviceProfile(10e18, 1, 4, 4, 32, 10, 95, 60, false, false, true);
         deviceProfiles[NodeDeviceType.TABLET] = DeviceProfile(15e18, 2, 4, 4, 64, 25, 90, 65, false, true, true);
-        deviceProfiles[NodeDeviceType.RASPBERRY_PI_4] =
-            DeviceProfile(25e18, 2, 4, 4, 32, 100, 85, 85, true, false, true);
-        deviceProfiles[NodeDeviceType.LAPTOP_CONSUMER] =
-            DeviceProfile(200e18, 5, 4, 8, 256, 50, 70, 75, true, true, true);
-        deviceProfiles[NodeDeviceType.WORKSTATION] =
-            DeviceProfile(1000e18, 15, 8, 32, 1000, 500, 60, 90, true, true, true);
-        deviceProfiles[NodeDeviceType.SERVER_TOWER] =
-            DeviceProfile(5000e18, 50, 16, 128, 4000, 1000, 70, 95, true, true, false);
-        deviceProfiles[NodeDeviceType.SERVER_RACK_2U] =
-            DeviceProfile(12000e18, 100, 32, 512, 16000, 5000, 70, 99, true, true, false);
-        deviceProfiles[NodeDeviceType.AWS_EC2_INSTANCE] =
-            DeviceProfile(10000e18, 100, 16, 64, 1000, 5000, 80, 99, true, true, true);
-        deviceProfiles[NodeDeviceType.CUSTOM_DEVICE] =
-            DeviceProfile(1000e18, 5, 4, 8, 256, 100, 70, 80, true, false, true);
+        deviceProfiles[NodeDeviceType.RASPBERRY_PI_4] = DeviceProfile(25e18, 2, 4, 4, 32, 100, 85, 85, true, false, true);
+        deviceProfiles[NodeDeviceType.RASPBERRY_PI_5] = DeviceProfile(35e18, 3, 4, 8, 64, 100, 88, 90, true, false, true);
+        deviceProfiles[NodeDeviceType.LAPTOP_CONSUMER] = DeviceProfile(200e18, 5, 4, 8, 256, 50, 70, 75, true, true, true);
+        deviceProfiles[NodeDeviceType.WORKSTATION] = DeviceProfile(1000e18, 15, 8, 32, 1000, 500, 60, 90, true, true, true);
+        deviceProfiles[NodeDeviceType.GAMING_RIG] = DeviceProfile(1500e18, 20, 8, 32, 2000, 500, 50, 85, true, true, true);
+        deviceProfiles[NodeDeviceType.SERVER_TOWER] = DeviceProfile(5000e18, 50, 16, 128, 4000, 1000, 70, 95, true, true, false);
+        deviceProfiles[NodeDeviceType.SERVER_RACK_2U] = DeviceProfile(12000e18, 100, 32, 512, 16000, 5000, 70, 99, true, true, false);
+        deviceProfiles[NodeDeviceType.AWS_EC2_INSTANCE] = DeviceProfile(10000e18, 100, 16, 64, 1000, 5000, 80, 99, true, true, true);
+        deviceProfiles[NodeDeviceType.QUANTUM_SIMULATOR] = DeviceProfile(100000e18, 5, 32, 256, 10000, 10000, 40, 95, true, true, false);
+        deviceProfiles[NodeDeviceType.CUSTOM_DEVICE] = DeviceProfile(1000e18, 5, 4, 8, 256, 100, 70, 80, true, false, true);
 
-        isMobileDevice[NodeDeviceType.SMARTPHONE] =
-            isMobileDevice[NodeDeviceType.TABLET] = isMobileDevice[NodeDeviceType.LAPTOP_CONSUMER] = true;
+        isMobileDevice[NodeDeviceType.SMARTPHONE] = isMobileDevice[NodeDeviceType.TABLET] = isMobileDevice[NodeDeviceType.LAPTOP_CONSUMER] = true;
         isServerDevice[NodeDeviceType.SERVER_TOWER] = isServerDevice[NodeDeviceType.SERVER_RACK_2U] = true;
     }
 
@@ -200,7 +198,8 @@ contract NodeRegistry is
             require(capabilities.isMobile && capabilities.batteryCapacityWh > 0, "Invalid mobile config");
         }
         if (isServerDevice[capabilities.deviceType]) {
-            require(!capabilities.isMobile && capabilities.uptime >= 95, "Invalid server config");
+            require(!capabilities.isMobile, "Server devices cannot be mobile");
+            require(capabilities.uptime >= 95, "Server devices require 95%+ uptime");
         }
 
         bytes32 attestationHash = keccak256(abi.encode(msg.sender, capabilities, attestationData));
