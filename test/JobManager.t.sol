@@ -23,9 +23,11 @@ contract JobManagerTest is Test {
     address public owner = address(0x1);
     address public client = address(0x6);
 
-    uint256 public constant JOB_PAYMENT = 100 * 10**18;
+    uint256 public constant JOB_PAYMENT = 100 * 10 ** 18;
 
-    event JobCreated(uint256 indexed jobId, address indexed client, JobManager.JobType jobType, uint256 payment, bool preferGreen);
+    event JobCreated(
+        uint256 indexed jobId, address indexed client, JobManager.JobType jobType, uint256 payment, bool preferGreen
+    );
 
     function setUp() public {
         vm.startPrank(owner);
@@ -53,7 +55,7 @@ contract JobManagerTest is Test {
             address(mockLink),
             address(mockOracle),
             bytes32("test-job"),
-            0.1 * 10**18,
+            0.1 * 10 ** 18,
             owner
         );
         ERC1967Proxy aiProxy = new ERC1967Proxy(address(aiImpl), aiInitData);
@@ -62,11 +64,7 @@ contract JobManagerTest is Test {
         // Deploy NodeRegistry
         NodeRegistry registryImpl = new NodeRegistry();
         bytes memory registryInitData = abi.encodeWithSelector(
-            NodeRegistry.initialize.selector,
-            address(tachyonToken),
-            address(greenVerifier),
-            address(aiOracle),
-            owner
+            NodeRegistry.initialize.selector, address(tachyonToken), address(greenVerifier), address(aiOracle), owner
         );
         ERC1967Proxy registryProxy = new ERC1967Proxy(address(registryImpl), registryInitData);
         nodeRegistry = NodeRegistry(address(registryProxy));
@@ -87,15 +85,15 @@ contract JobManagerTest is Test {
         // Grant role to client and owner
         jobManager.grantRole(jobManager.JOB_CREATOR_ROLE(), client);
         jobManager.grantRole(jobManager.JOB_CREATOR_ROLE(), owner);
-        
+
         // Grant AI_CONSUMER_ROLE to JobManager so it can call AIOracle
         aiOracle.grantRole(aiOracle.AI_CONSUMER_ROLE(), address(jobManager));
 
         // Fund AIOracle with LINK tokens for oracle calls
-        mockLink.transfer(address(aiOracle), 10 * 10**18);
+        mockLink.transfer(address(aiOracle), 10 * 10 ** 18);
 
         // Mint tokens to client
-        tachyonToken.mint(client, 10000 * 10**18);
+        tachyonToken.mint(client, 10000 * 10 ** 18);
 
         vm.stopPrank();
     }
@@ -111,7 +109,7 @@ contract JobManagerTest is Test {
 
     function testCreateJob() public {
         vm.startPrank(client);
-        
+
         // Approve payment for job
         tachyonToken.approve(address(jobManager), JOB_PAYMENT);
 
@@ -135,15 +133,8 @@ contract JobManagerTest is Test {
         vm.expectEmit(true, true, false, true);
         emit JobCreated(1, client, jobType, JOB_PAYMENT, preferGreenNodes);
 
-        uint256 jobId = jobManager.createJob(
-            jobType,
-            priority,
-            requirements,
-            JOB_PAYMENT,
-            deadline,
-            ipfsHash,
-            preferGreenNodes
-        );
+        uint256 jobId =
+            jobManager.createJob(jobType, priority, requirements, JOB_PAYMENT, deadline, ipfsHash, preferGreenNodes);
 
         assertEq(jobId, 1);
 
@@ -152,9 +143,9 @@ contract JobManagerTest is Test {
 
     function testCreateJobInsufficientPayment() public {
         vm.startPrank(client);
-        
+
         // Don't approve enough tokens
-        uint256 lowPayment = 5 * 10**18; // Below minimum
+        uint256 lowPayment = 5 * 10 ** 18; // Below minimum
         tachyonToken.approve(address(jobManager), lowPayment);
 
         // Create resource requirements
@@ -184,7 +175,7 @@ contract JobManagerTest is Test {
 
     function testCreateJobInvalidDeadline() public {
         vm.startPrank(client);
-        
+
         tachyonToken.approve(address(jobManager), JOB_PAYMENT);
 
         JobManager.ResourceRequirements memory requirements = JobManager.ResourceRequirements({
@@ -213,7 +204,7 @@ contract JobManagerTest is Test {
 
     function testCreateJobEmptyIPFSHash() public {
         vm.startPrank(client);
-        
+
         tachyonToken.approve(address(jobManager), JOB_PAYMENT);
 
         JobManager.ResourceRequirements memory requirements = JobManager.ResourceRequirements({
@@ -242,7 +233,7 @@ contract JobManagerTest is Test {
 
     function testCreateJobZeroDuration() public {
         vm.startPrank(client);
-        
+
         tachyonToken.approve(address(jobManager), JOB_PAYMENT);
 
         JobManager.ResourceRequirements memory requirements = JobManager.ResourceRequirements({
@@ -271,7 +262,7 @@ contract JobManagerTest is Test {
 
     function testGetMinJobPayment() public view {
         uint256 minPayment = jobManager.minJobPayment();
-        assertEq(minPayment, 10 * 10**18); // 10 TACH minimum
+        assertEq(minPayment, 10 * 10 ** 18); // 10 TACH minimum
     }
 
     function testGetMaxJobDuration() public view {
@@ -301,16 +292,16 @@ contract JobManagerTest is Test {
 
     function testPauseUnpause() public {
         vm.startPrank(owner);
-        
+
         jobManager.pause();
         assertTrue(jobManager.paused());
-        
+
         // Should not be able to create jobs when paused
         vm.stopPrank();
         vm.startPrank(client);
-        
+
         tachyonToken.approve(address(jobManager), JOB_PAYMENT);
-        
+
         JobManager.ResourceRequirements memory requirements = JobManager.ResourceRequirements({
             minCpuCores: 2,
             minRamGB: 4,
@@ -331,9 +322,9 @@ contract JobManagerTest is Test {
             "QmTestHash",
             false
         );
-        
+
         vm.stopPrank();
-        
+
         vm.startPrank(owner);
         jobManager.unpause();
         assertFalse(jobManager.paused());
@@ -343,7 +334,7 @@ contract JobManagerTest is Test {
     function testAccessControl() public {
         // Non-job-creator should not be able to create jobs
         vm.startPrank(address(0x999));
-        
+
         JobManager.ResourceRequirements memory requirements = JobManager.ResourceRequirements({
             minCpuCores: 2,
             minRamGB: 4,
@@ -364,13 +355,13 @@ contract JobManagerTest is Test {
             "QmTestHash",
             false
         );
-        
+
         vm.stopPrank();
     }
 
     function testCreateJobWithGPURequirement() public {
         vm.startPrank(client);
-        
+
         tachyonToken.approve(address(jobManager), JOB_PAYMENT);
 
         // Create GPU-required job
@@ -401,7 +392,7 @@ contract JobManagerTest is Test {
 
     function testCreateMultipleJobs() public {
         vm.startPrank(client);
-        
+
         // Approve payment for multiple jobs
         tachyonToken.approve(address(jobManager), JOB_PAYMENT * 3);
 
@@ -457,7 +448,7 @@ contract JobManagerTest is Test {
 
     function testJobTypeCount() public {
         vm.startPrank(client);
-        
+
         tachyonToken.approve(address(jobManager), JOB_PAYMENT * 2);
 
         JobManager.ResourceRequirements memory requirements = JobManager.ResourceRequirements({

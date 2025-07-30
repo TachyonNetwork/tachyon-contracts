@@ -18,8 +18,8 @@ contract AIOracleTest is Test {
     address public node1 = address(0x4);
     address public node2 = address(0x5);
 
-    bytes32 public constant TEST_JOB_ID = bytes32("test-job-id"); 
-    uint256 public constant TEST_FEE = 0.1 * 10**18;
+    bytes32 public constant TEST_JOB_ID = bytes32("test-job-id");
+    uint256 public constant TEST_FEE = 0.1 * 10 ** 18;
 
     function setUp() public {
         vm.startPrank(owner);
@@ -31,12 +31,7 @@ contract AIOracleTest is Test {
         // Deploy AIOracle
         AIOracle aiImpl = new AIOracle();
         bytes memory initData = abi.encodeWithSelector(
-            AIOracle.initialize.selector,
-            address(mockLink),
-            address(mockOracle),
-            TEST_JOB_ID,
-            TEST_FEE,
-            owner
+            AIOracle.initialize.selector, address(mockLink), address(mockOracle), TEST_JOB_ID, TEST_FEE, owner
         );
         ERC1967Proxy aiProxy = new ERC1967Proxy(address(aiImpl), initData);
         aiOracle = AIOracle(address(aiProxy));
@@ -46,7 +41,7 @@ contract AIOracleTest is Test {
         aiOracle.grantRole(aiOracle.ORACLE_MANAGER_ROLE(), oracleManager);
 
         // Fund oracle with LINK
-        mockLink.transfer(address(aiOracle), 10 * 10**18);
+        mockLink.transfer(address(aiOracle), 10 * 10 ** 18);
 
         vm.stopPrank();
     }
@@ -56,7 +51,7 @@ contract AIOracleTest is Test {
         assertTrue(aiOracle.hasRole(aiOracle.DEFAULT_ADMIN_ROLE(), owner));
         assertTrue(aiOracle.hasRole(aiOracle.AI_CONSUMER_ROLE(), consumer));
         assertTrue(aiOracle.hasRole(aiOracle.ORACLE_MANAGER_ROLE(), oracleManager));
-        assertEq(aiOracle.getLinkBalance(), 10 * 10**18);
+        assertEq(aiOracle.getLinkBalance(), 10 * 10 ** 18);
     }
 
     function testRequestPrediction() public {
@@ -65,21 +60,13 @@ contract AIOracleTest is Test {
         bytes32 taskId = keccak256("test-task");
         bytes memory inputData = "test-input";
 
-        bytes32 requestId = aiOracle.requestPrediction(
-            AIOracle.PredictionType.NODE_SELECTION,
-            taskId,
-            inputData
-        );
+        bytes32 requestId = aiOracle.requestPrediction(AIOracle.PredictionType.NODE_SELECTION, taskId, inputData);
 
         assertTrue(requestId != bytes32(0));
 
         // Check pending request was stored
-        (
-            AIOracle.PredictionType predictionType,
-            bytes32 storedTaskId,
-            address requester,
-            uint256 timestamp
-        ) = aiOracle.pendingRequests(requestId);
+        (AIOracle.PredictionType predictionType, bytes32 storedTaskId, address requester, uint256 timestamp) =
+            aiOracle.pendingRequests(requestId);
 
         assertEq(uint256(predictionType), uint256(AIOracle.PredictionType.NODE_SELECTION));
         assertEq(storedTaskId, taskId);
@@ -91,10 +78,10 @@ contract AIOracleTest is Test {
 
     function testUpdateNodeScore() public {
         vm.startPrank(oracleManager);
-        
+
         aiOracle.updateNodeScore(node1, 95);
         assertEq(aiOracle.nodeScores(node1), 95);
-        
+
         vm.stopPrank();
     }
 
@@ -103,30 +90,30 @@ contract AIOracleTest is Test {
         nodes[0] = node1;
         nodes[1] = node2;
         nodes[2] = address(0x6);
-        
+
         uint256[] memory scores = new uint256[](3);
         scores[0] = 88;
-        scores[1] = 92; 
+        scores[1] = 92;
         scores[2] = 76;
 
         vm.startPrank(oracleManager);
         aiOracle.batchUpdateNodeScores(nodes, scores);
-        
+
         for (uint256 i = 0; i < nodes.length; i++) {
             assertEq(aiOracle.nodeScores(nodes[i]), scores[i]);
         }
-        
+
         vm.stopPrank();
     }
 
     function testGetOptimalNodes() public view {
         bytes memory taskRequirements = "";
         (address[] memory nodes, uint256[] memory scores) = aiOracle.getOptimalNodes(taskRequirements);
-        
+
         // Should return empty arrays for now (stub implementation)
         assertEq(nodes.length, 10);
         assertEq(scores.length, 10);
-        
+
         // All should be zero addresses and scores
         for (uint256 i = 0; i < nodes.length; i++) {
             assertEq(nodes[i], address(0));
@@ -136,7 +123,7 @@ contract AIOracleTest is Test {
 
     function testGetDemandForecastDefault() public view {
         bytes32 taskId = keccak256("test-task");
-        
+
         // Test default values (no prediction)
         (uint256 demand, uint256 urgency, uint256 confidence) = aiOracle.getDemandForecast(taskId);
         assertEq(demand, 50);
@@ -171,10 +158,10 @@ contract AIOracleTest is Test {
 
     function testUpdateNodeScoreInvalidScore() public {
         vm.startPrank(oracleManager);
-        
+
         vm.expectRevert("Score must be 0-100");
         aiOracle.updateNodeScore(node1, 101); // Invalid score > 100
-        
+
         vm.stopPrank();
     }
 
@@ -182,7 +169,7 @@ contract AIOracleTest is Test {
         address[] memory nodes = new address[](2);
         nodes[0] = node1;
         nodes[1] = node2;
-        
+
         uint256[] memory scores = new uint256[](3); // Different length
         scores[0] = 88;
         scores[1] = 92;
@@ -198,7 +185,7 @@ contract AIOracleTest is Test {
         address[] memory nodes = new address[](2);
         nodes[0] = node1;
         nodes[1] = node2;
-        
+
         uint256[] memory scores = new uint256[](2);
         scores[0] = 88;
         scores[1] = 150; // Invalid score > 100
@@ -211,17 +198,17 @@ contract AIOracleTest is Test {
 
     function testPauseUnpause() public {
         vm.startPrank(owner);
-        
+
         aiOracle.pause();
         assertTrue(aiOracle.paused());
-        
+
         // Should not be able to request predictions when paused
         vm.stopPrank();
         vm.startPrank(consumer);
         vm.expectRevert(); // Just expect any revert due to paused state
         aiOracle.requestPrediction(AIOracle.PredictionType.NODE_SELECTION, bytes32(0), "");
         vm.stopPrank();
-        
+
         vm.startPrank(owner);
         aiOracle.unpause();
         assertFalse(aiOracle.paused());
@@ -234,7 +221,7 @@ contract AIOracleTest is Test {
         vm.expectRevert();
         aiOracle.requestPrediction(AIOracle.PredictionType.NODE_SELECTION, bytes32(0), "");
         vm.stopPrank();
-        
+
         // Non-oracle-manager should not be able to update scores
         vm.startPrank(address(0x999));
         vm.expectRevert();
@@ -245,7 +232,7 @@ contract AIOracleTest is Test {
     function testUpdateOracleConfig() public {
         address newOracle = address(0x123);
         bytes32 newJobId = bytes32("new-job-id");
-        uint256 newFee = 0.2 * 10**18;
+        uint256 newFee = 0.2 * 10 ** 18;
 
         vm.startPrank(oracleManager);
         aiOracle.updateOracleConfig(newOracle, newJobId, newFee);

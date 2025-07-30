@@ -56,7 +56,7 @@ contract NodeRegistryTest is Test {
             address(mockLink),
             address(mockOracle),
             bytes32("test-job"),
-            0.1 * 10**18,
+            0.1 * 10 ** 18,
             owner
         );
         ERC1967Proxy aiProxy = new ERC1967Proxy(address(aiImpl), aiInitData);
@@ -65,11 +65,7 @@ contract NodeRegistryTest is Test {
         // Deploy NodeRegistry
         NodeRegistry registryImpl = new NodeRegistry();
         bytes memory registryInitData = abi.encodeWithSelector(
-            NodeRegistry.initialize.selector,
-            address(tachyonToken),
-            address(greenVerifier),
-            address(aiOracle),
-            owner
+            NodeRegistry.initialize.selector, address(tachyonToken), address(greenVerifier), address(aiOracle), owner
         );
         ERC1967Proxy registryProxy = new ERC1967Proxy(address(registryImpl), registryInitData);
         nodeRegistry = NodeRegistry(address(registryProxy));
@@ -80,7 +76,7 @@ contract NodeRegistryTest is Test {
         nodeRegistry.grantRole(nodeRegistry.SLASHER_ROLE(), slasher);
 
         // Mint tokens to test node
-        tachyonToken.mint(node1, 10000 * 10**18);
+        tachyonToken.mint(node1, 10000 * 10 ** 18);
 
         vm.stopPrank();
     }
@@ -120,7 +116,7 @@ contract NodeRegistryTest is Test {
         });
 
         bytes memory attestationData = "node-attestation-data";
-        
+
         // Create attestation hash and sign it
         bytes32 attestationHash = keccak256(abi.encode(node1, capabilities, attestationData));
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(attestationHash);
@@ -128,7 +124,7 @@ contract NodeRegistryTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
 
         // Approve required stake (200e18 for LAPTOP_CONSUMER)
-        uint256 requiredStake = 200 * 10**18;
+        uint256 requiredStake = 200 * 10 ** 18;
         tachyonToken.approve(address(nodeRegistry), requiredStake);
 
         vm.expectEmit(true, false, false, true);
@@ -147,7 +143,9 @@ contract NodeRegistryTest is Test {
             uint128 tasksDisputed,
             uint64 reputation,
             uint32 activeTasks,
-            ,,,
+            ,
+            ,
+            ,
             bool registered,
             bool isGreen,
             bool isPowerSaving
@@ -195,13 +193,13 @@ contract NodeRegistryTest is Test {
         });
 
         bytes memory attestationData = "node-attestation-data";
-        
+
         bytes32 attestationHash = keccak256(abi.encode(node1, capabilities, attestationData));
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(attestationHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(attestorPrivateKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        uint256 requiredStake = 200 * 10**18;
+        uint256 requiredStake = 200 * 10 ** 18;
         tachyonToken.approve(address(nodeRegistry), requiredStake);
 
         vm.expectRevert("Insufficient specs");
@@ -235,14 +233,14 @@ contract NodeRegistryTest is Test {
         });
 
         bytes memory attestationData = "node-attestation-data";
-        
+
         // Sign with wrong private key
         bytes32 attestationHash = keccak256(abi.encode(node1, capabilities, attestationData));
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(attestationHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(999, ethSignedMessageHash); // Wrong key
         bytes memory invalidSignature = abi.encodePacked(r, s, v);
 
-        uint256 requiredStake = 200 * 10**18;
+        uint256 requiredStake = 200 * 10 ** 18;
         tachyonToken.approve(address(nodeRegistry), requiredStake);
 
         vm.expectRevert("Invalid signature");
@@ -286,7 +284,7 @@ contract NodeRegistryTest is Test {
             bool supportsLowLatency
         ) = nodeRegistry.deviceProfiles(NodeRegistry.NodeDeviceType.LAPTOP_CONSUMER);
 
-        assertEq(minStakeRequired, 200 * 10**18);
+        assertEq(minStakeRequired, 200 * 10 ** 18);
         assertEq(maxConcurrentTasks, 5);
         assertEq(minCpuCores, 4);
         assertEq(minRamGB, 8);
@@ -315,15 +313,15 @@ contract NodeRegistryTest is Test {
 
     function testPauseUnpause() public {
         vm.startPrank(owner);
-        
+
         nodeRegistry.pause();
         assertTrue(nodeRegistry.paused());
-        
+
         vm.stopPrank();
-        
+
         // Should not be able to register when paused
         vm.startPrank(node1);
-        
+
         NodeRegistry.NodeCapabilities memory capabilities = NodeRegistry.NodeCapabilities({
             deviceType: NodeRegistry.NodeDeviceType.SMARTPHONE,
             cpuCores: 4,
@@ -347,9 +345,9 @@ contract NodeRegistryTest is Test {
 
         vm.expectRevert(); // Generic revert due to paused state
         nodeRegistry.registerNode(capabilities, "test", "signature");
-        
+
         vm.stopPrank();
-        
+
         vm.startPrank(owner);
         nodeRegistry.unpause();
         assertFalse(nodeRegistry.paused());
@@ -359,7 +357,7 @@ contract NodeRegistryTest is Test {
     function testAccessControl() public {
         // Non-attestor address should not be trusted for signatures
         address nonAttestor = address(0x999);
-        
+
         vm.startPrank(node1);
 
         NodeRegistry.NodeCapabilities memory capabilities = NodeRegistry.NodeCapabilities({
@@ -386,13 +384,13 @@ contract NodeRegistryTest is Test {
         bytes memory attestationData = "node-attestation-data";
         bytes32 attestationHash = keccak256(abi.encode(node1, capabilities, attestationData));
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(attestationHash);
-        
+
         // Sign with non-attestor key
         uint256 nonAttestorKey = 777;
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(nonAttestorKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        uint256 requiredStake = 200 * 10**18;
+        uint256 requiredStake = 200 * 10 ** 18;
         tachyonToken.approve(address(nodeRegistry), requiredStake);
 
         vm.expectRevert("Invalid signature");

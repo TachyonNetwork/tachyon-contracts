@@ -86,7 +86,7 @@ contract GreenVerifierTest is Test {
         uint256 energyType = 1;
         uint256 percentage = 85;
         bytes memory certData = "renewable-energy-certificate-data";
-        
+
         // Create invalid signature (wrong message)
         bytes32 wrongMessage = keccak256("wrong-message");
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(wrongMessage);
@@ -155,7 +155,7 @@ contract GreenVerifierTest is Test {
         greenVerifier.verifyCertificate(node1, true);
 
         // Check verification status
-        ( , , , , , bool isVerified) = greenVerifier.greenCertificates(node1);
+        (,,,,, bool isVerified) = greenVerifier.greenCertificates(node1);
         assertTrue(isVerified);
 
         vm.stopPrank();
@@ -185,7 +185,7 @@ contract GreenVerifierTest is Test {
         greenVerifier.verifyCertificate(node1, false);
 
         // Check verification status
-        ( , , , , , bool isVerified) = greenVerifier.greenCertificates(node1);
+        (,,,,, bool isVerified) = greenVerifier.greenCertificates(node1);
         assertFalse(isVerified);
 
         vm.stopPrank();
@@ -221,17 +221,17 @@ contract GreenVerifierTest is Test {
 
     function testPauseUnpause() public {
         vm.startPrank(owner);
-        
+
         greenVerifier.pause();
         assertTrue(greenVerifier.paused());
-        
+
         // Should not be able to submit certificates when paused
         vm.stopPrank();
         vm.startPrank(node1);
-        vm.expectRevert(); // Generic revert due to paused state
+        vm.expectRevert("Pausable: paused");
         greenVerifier.submitGreenCertificate(1, 80, "test", "signature");
         vm.stopPrank();
-        
+
         vm.startPrank(owner);
         greenVerifier.unpause();
         assertFalse(greenVerifier.paused());
