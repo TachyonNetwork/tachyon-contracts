@@ -28,26 +28,18 @@ contract MockOracle {
     ) external returns (bytes32 requestId) {
         requestId = keccak256(abi.encodePacked(sender, nonce));
         pendingRequests[requestId] = callbackAddress;
-        
+
         emit OracleRequest(
-            specId,
-            sender,
-            requestId,
-            payment,
-            callbackAddress,
-            callbackFunctionId,
-            0,
-            dataVersion,
-            data
+            specId, sender, requestId, payment, callbackAddress, callbackFunctionId, 0, dataVersion, data
         );
-        
+
         // For testing, immediately fulfill the request with mock data
         // This simulates the oracle response
         (bool success,) = callbackAddress.call(
             abi.encodeWithSelector(callbackFunctionId, requestId, bytes32(uint256(85))) // Mock AI score of 85
         );
         require(success, "Callback failed");
-        
+
         return requestId;
     }
 }

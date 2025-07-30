@@ -29,8 +29,8 @@ contract TachyonSystemTest is Test {
     address public node2 = address(0x3);
     address public client = address(0x4);
     address public energyProvider;
-    
-    // Energy provider key for signing  
+
+    // Energy provider key for signing
     uint256 public energyProviderKey = 5;
 
     // Mock contracts for external dependencies
@@ -54,7 +54,7 @@ contract TachyonSystemTest is Test {
     function setUp() public {
         // Initialize energy provider address from key
         energyProvider = vm.addr(energyProviderKey);
-        
+
         vm.startPrank(owner);
 
         // Deploy all contracts with UUPS proxies
@@ -73,7 +73,7 @@ contract TachyonSystemTest is Test {
         // Deploy mock contracts first
         mockLink = new MockLinkToken();
         mockOracle = new MockOracle();
-        
+
         // 1. Deploy TachyonToken
         TachyonToken tachyonImpl = new TachyonToken();
         bytes memory tachyonInitData = abi.encodeWithSelector(TachyonToken.initialize.selector, owner);
@@ -88,8 +88,9 @@ contract TachyonSystemTest is Test {
 
         // 3. Deploy AIOracle
         AIOracle aiImpl = new AIOracle();
-        bytes memory aiInitData =
-            abi.encodeWithSelector(AIOracle.initialize.selector, address(mockLink), address(mockOracle), mockJobId, mockFee, owner);
+        bytes memory aiInitData = abi.encodeWithSelector(
+            AIOracle.initialize.selector, address(mockLink), address(mockOracle), mockJobId, mockFee, owner
+        );
         ERC1967Proxy aiProxy = new ERC1967Proxy(address(aiImpl), aiInitData);
         aiOracle = AIOracle(address(aiProxy));
 
@@ -135,28 +136,28 @@ contract TachyonSystemTest is Test {
         // Grant AI_CONSUMER_ROLE to JobManager and NodeRegistry
         aiOracle.grantRole(aiOracle.AI_CONSUMER_ROLE(), address(jobManager));
         aiOracle.grantRole(aiOracle.AI_CONSUMER_ROLE(), address(nodeRegistry));
-        
+
         // Grant admin role to NodeRegistry on AIOracle so it can grant AI_CONSUMER_ROLE to nodes
         aiOracle.grantRole(aiOracle.DEFAULT_ADMIN_ROLE(), address(nodeRegistry));
-        
+
         // Grant ORACLE_MANAGER_ROLE to owner for updating AI scores
         aiOracle.grantRole(aiOracle.ORACLE_MANAGER_ROLE(), owner);
 
         // Grant SLASHER_ROLE to RewardManager
         nodeRegistry.grantRole(nodeRegistry.SLASHER_ROLE(), address(rewardManager));
-        
+
         // Grant DEFAULT_ADMIN_ROLE to JobManager so it can update node reputation
         nodeRegistry.grantRole(nodeRegistry.DEFAULT_ADMIN_ROLE(), address(jobManager));
 
         // Grant ORACLE_ROLE to energy provider for submitting certificates
         greenVerifier.grantRole(greenVerifier.ORACLE_ROLE(), energyProvider);
-        
+
         // Grant VERIFIER_ROLE to energy provider for verifying certificates
         greenVerifier.grantRole(greenVerifier.VERIFIER_ROLE(), energyProvider);
 
         // Grant JOB_CREATOR_ROLE to client
         jobManager.grantRole(jobManager.JOB_CREATOR_ROLE(), client);
-        
+
         // Grant JOB_VALIDATOR_ROLE to owner for job assignment
         jobManager.grantRole(jobManager.JOB_VALIDATOR_ROLE(), owner);
     }
@@ -220,13 +221,13 @@ contract TachyonSystemTest is Test {
 
         // Register node (stake amount is determined by device type)
         vm.stopPrank();
-        
+
         // Temporarily grant attestor role to test private key signer as owner
         address signer = vm.addr(1);
         vm.startPrank(owner);
         nodeRegistry.grantRole(nodeRegistry.ATTESTOR_ROLE(), signer);
         vm.stopPrank();
-        
+
         vm.startPrank(node1);
         nodeRegistry.registerNode(capabilities, attestationData, signature);
 
@@ -246,10 +247,10 @@ contract TachyonSystemTest is Test {
         bytes memory certificateData = "solarPanelData";
         uint256 energySourceType = 1; // Solar
         uint256 percentage = 80; // 80% renewable
-        
+
         // Create message hash in the format expected by GreenVerifier
         bytes32 messageHash = keccak256(abi.encodePacked(node1, energySourceType, percentage, certificateData));
-        
+
         // Create proper signature from energy provider (has both ORACLE_ROLE and VERIFIER_ROLE)
         bytes memory signature = signMessage(energyProviderKey, messageHash);
 
@@ -393,10 +394,10 @@ contract TachyonSystemTest is Test {
     function testZKProofValidation() public {
         // This test checks ZK proof validation functionality
         // Currently simplified due to complex RewardManager integration
-        
+
         // Just verify the RewardManager is deployed and accessible
         assertTrue(address(rewardManager) != address(0), "RewardManager should be deployed");
-        
+
         // TODO: Implement full ZK proof validation test once RewardManager integration is complete
     }
 
@@ -434,12 +435,12 @@ contract TachyonSystemTest is Test {
         bytes memory helperSignature = signMessage(1, helperAttestationHash);
 
         vm.stopPrank();
-        
+
         address helperSigner = vm.addr(1);
         vm.startPrank(owner);
         nodeRegistry.grantRole(nodeRegistry.ATTESTOR_ROLE(), helperSigner);
         vm.stopPrank();
-        
+
         vm.startPrank(node1);
         nodeRegistry.registerNode(capabilities, helperAttestationData, helperSignature);
 
@@ -450,10 +451,10 @@ contract TachyonSystemTest is Test {
         bytes memory certificateData = "solarData";
         uint256 energySourceType = 1; // Solar
         uint256 percentage = 90; // 90% renewable
-        
+
         // Create message hash in the format expected by GreenVerifier
         bytes32 messageHash = keccak256(abi.encodePacked(node1, energySourceType, percentage, certificateData));
-        
+
         // Create proper signature using the energy provider key
         bytes memory signature = signMessage(energyProviderKey, messageHash);
 

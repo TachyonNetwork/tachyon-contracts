@@ -15,11 +15,11 @@ contract TachyonTokenTest is Test {
     function setUp() public {
         // Deploy implementation
         TachyonToken implementation = new TachyonToken();
-        
+
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(TachyonToken.initialize.selector, owner);
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        
+
         // Cast proxy to TachyonToken interface
         token = TachyonToken(payable(address(proxy)));
     }
