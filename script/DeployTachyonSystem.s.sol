@@ -205,67 +205,7 @@ contract DeployTachyonSystem is Script {
         console.log("JobManager Proxy:", contracts.jobManagerProxy);
         console.log("JobManager Implementation:", contracts.jobManagerImpl);
 
-        // Save deployment info to JSON file
-        string memory json = string.concat(
-            "{\n",
-            '  "network": "base-sepolia",\n',
-            '  "timestamp": "',
-            vm.toString(block.timestamp),
-            '",\n',
-            '  "contracts": {\n',
-            '    "TachyonToken": {\n',
-            '      "proxy": "',
-            vm.toString(contracts.tachyonTokenProxy),
-            '",\n',
-            '      "implementation": "',
-            vm.toString(contracts.tachyonTokenImpl),
-            '"\n',
-            "    },\n",
-            '    "GreenVerifier": {\n',
-            '      "proxy": "',
-            vm.toString(contracts.greenVerifierProxy),
-            '",\n',
-            '      "implementation": "',
-            vm.toString(contracts.greenVerifierImpl),
-            '"\n',
-            "    },\n",
-            '    "AIOracle": {\n',
-            '      "proxy": "',
-            vm.toString(contracts.aiOracleProxy),
-            '",\n',
-            '      "implementation": "',
-            vm.toString(contracts.aiOracleImpl),
-            '"\n',
-            "    },\n",
-            '    "NodeRegistry": {\n',
-            '      "proxy": "',
-            vm.toString(contracts.nodeRegistryProxy),
-            '",\n',
-            '      "implementation": "',
-            vm.toString(contracts.nodeRegistryImpl),
-            '"\n',
-            "    },\n",
-            '    "RewardManager": {\n',
-            '      "proxy": "',
-            vm.toString(contracts.rewardManagerProxy),
-            '",\n',
-            '      "implementation": "',
-            vm.toString(contracts.rewardManagerImpl),
-            '"\n',
-            "    },\n",
-            '    "JobManager": {\n',
-            '      "proxy": "',
-            vm.toString(contracts.jobManagerProxy),
-            '",\n',
-            '      "implementation": "',
-            vm.toString(contracts.jobManagerImpl),
-            '"\n',
-            "    }\n",
-            "  }\n",
-            "}"
-        );
-
-        vm.writeFile("deployments.json", json);
-        console.log("Deployment info saved to deployments.json");
+        // Comment out file writing for now due to Forge restrictions
+        // The deployment addresses are logged above
     }
 }
