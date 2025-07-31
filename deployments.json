@@ -1,11 +1,11 @@
 {
   "chainId": 84532,
   "chainName": "Base Sepolia", 
-  "deploymentDate": "2025-07-30",
+  "deploymentDate": "2025-07-31",
   "deployer": "0x7c17f9D9378a2aa5fB98BDc8E3b8aaF3c8eedd71",
   "TachyonToken": {
-    "implementation": "0x953A8584C4ec41E1243b93DDdf2BFdf2a552BB5b",
-    "proxy": "0xf93056521b4EeB401fAB8784A8977CD47491De95",
+    "proxy": "0x2e36816eD13a9C8DE8fF3c09FF2B636d20290841",
+    "implementation": "0xEBaf9130E8D94Ecb6b88AbEcf46F7B5B61CA231D",
     "verified": true,
     "owner": "0x7c17f9D9378a2aa5fB98BDc8E3b8aaF3c8eedd71",
     "pattern": "UUPS",
@@ -14,31 +14,59 @@
     "name": "Tachyon Token",
     "decimals": 18,
     "description": "ERC20 utility token for Tachyon Network with 10B total supply and UUPS upgradeability",
-    "links": {
-      "proxy": "https://sepolia.basescan.org/address/0xf93056521b4EeB401fAB8784A8977CD47491De95#code",
-      "implementation": "https://sepolia.basescan.org/address/0x953A8584C4ec41E1243b93DDdf2BFdf2a552BB5b#code"
+    "blockscout": {
+      "proxy": "https://base-sepolia.blockscout.com/address/0x2e36816eD13a9C8DE8fF3c09FF2B636d20290841",
+      "implementation": "https://base-sepolia.blockscout.com/address/0xebaf9130e8d94ecb6b88abecf46f7b5b61ca231d"
+    }
+  },
+  "GreenVerifier": {
+    "proxy": "0x90B25A51c7d9693bb56B4964c5c4a32F7E94e025",
+    "implementation": "0x5B71b4Ee99664bD986d741F617838b5e9988dCD1",
+    "verified": true,
+    "description": "Green energy verification system for renewable energy incentives",
+    "blockscout": {
+      "proxy": "https://base-sepolia.blockscout.com/address/0x90B25A51c7d9693bb56B4964c5c4a32F7E94e025",
+      "implementation": "https://base-sepolia.blockscout.com/address/0x5b71b4ee99664bd986d741f617838b5e9988dcd1"
+    }
+  },
+  "AIOracle": {
+    "proxy": "0xFa62d464be301ed9378312fc34d82B2121311fE8",
+    "implementation": "0xB5C8DFEdA4BB05F4Addcb8608924e9af0BA6D129",
+    "verified": true,
+    "description": "AI-powered oracle for task optimization and demand forecasting",
+    "blockscout": {
+      "proxy": "https://base-sepolia.blockscout.com/address/0xFa62d464be301ed9378312fc34d82B2121311fE8",
+      "implementation": "https://base-sepolia.blockscout.com/address/0xb5c8dfeda4bb05f4addcb8608924e9af0ba6d129"
     }
   },
   "NodeRegistry": {
-    "proxy": "0x5B71b4Ee99664bD986d741F617838b5e9988dCD1",
-    "implementation": "0x2e36816eD13a9C8DE8fF3c09FF2B636d20290841",
-    "verified": false,
-    "description": "Node registry with mobile device support and tiered staking"
-  },
-  "GreenVerifier": {
-    "proxy": "0x953A8584C4ec41E1243b93DDdf2BFdf2a552BB5b",
-    "implementation": "0x734B9d63ee76409F28386676e1746205193dd830"
-  },
-  "AIOracle": {
-    "proxy": "0xEBaf9130E8D94Ecb6b88AbEcf46F7B5B61CA231D", 
-    "implementation": "0xf93056521b4EeB401fAB8784A8977CD47491De95"
+    "proxy": "0xD4Ee0c98c70D83549916815B8e934b2436AFe9D1",
+    "implementation": "0x171b0c3b0e3766D7eA714eCAc4951589F6793507",
+    "verified": true,
+    "description": "Node registry with mobile device support and tiered staking",
+    "blockscout": {
+      "proxy": "https://base-sepolia.blockscout.com/address/0xd4ee0c98c70d83549916815b8e934b2436afe9d1",
+      "implementation": "https://base-sepolia.blockscout.com/address/0x171b0c3b0e3766d7ea714ecac4951589f6793507"
+    }
   },
   "RewardManager": {
-    "proxy": "0xB5C8DFEdA4BB05F4Addcb8608924e9af0BA6D129",
-    "implementation": "0x90B25A51c7d9693bb56B4964c5c4a32F7E94e025"
+    "proxy": "0x749c6aE6d92ec629001BEf1bC48BbcC3D701B7b0",
+    "implementation": "0xD54b23B5f3b019C0a471b675168AcE7374683787",
+    "verified": true,
+    "description": "Reward distribution system with ZK proof validation",
+    "blockscout": {
+      "proxy": "https://base-sepolia.blockscout.com/address/0x749c6aE6d92ec629001BEf1bC48BbcC3D701B7b0",
+      "implementation": "https://base-sepolia.blockscout.com/address/0xd54b23b5f3b019c0a471b675168ace7374683787"
+    }
   },
   "JobManager": {
-    "proxy": "0x171b0c3b0e3766D7eA714eCAc4951589F6793507",
-    "implementation": "0xFa62d464be301ed9378312fc34d82B2121311fE8"
+    "proxy": "0x425d6033e8495174b0D8c23f29b0CA0938a974Cd",
+    "implementation": "0x76b80E6B0D3C4dDf43909741022F85D42aDa145A",
+    "verified": true,
+    "description": "Job management system with dynamic pricing and green node prioritization",
+    "blockscout": {
+      "proxy": "https://base-sepolia.blockscout.com/address/0x425d6033e8495174b0D8c23f29b0CA0938a974Cd",
+      "implementation": "https://base-sepolia.blockscout.com/address/0x76b80e6b0d3c4ddf43909741022f85d42ada145a"
+    }
   }
 }
