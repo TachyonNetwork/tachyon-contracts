@@ -204,8 +204,5 @@ contract DeployTachyonSystem is Script {
         console.log("RewardManager Implementation:", contracts.rewardManagerImpl);
         console.log("JobManager Proxy:", contracts.jobManagerProxy);
         console.log("JobManager Implementation:", contracts.jobManagerImpl);
-
-        // Comment out file writing for now due to Forge restrictions
-        // The deployment addresses are logged above
     }
 }
