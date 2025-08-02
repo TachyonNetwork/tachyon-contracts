@@ -418,6 +418,21 @@ contract NodeRegistryCompact is
     function version() public pure returns (string memory) {
         return "1.0.6";
     }
+
+    // Add getNodeDetails for JobManager compatibility
+    function getNodeDetails(address nodeAddress) 
+        external 
+        view 
+        returns (
+            NodeInfo memory nodeInfo,
+            DeviceProfile memory profile,
+            ResourceAttestation memory attestation
+        ) 
+    {
+        nodeInfo = nodes[nodeAddress];
+        profile = nodeInfo.deviceProfile;
+        attestation = nodeInfo.attestation;
+    }
 }
 
 interface IStorageCompatible {

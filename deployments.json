@@ -30,13 +30,13 @@
     }
   },
   "AIOracle": {
-    "proxy": "0xFa62d464be301ed9378312fc34d82B2121311fE8",
-    "implementation": "0xB5C8DFEdA4BB05F4Addcb8608924e9af0BA6D129",
+    "proxy": "0xC891E58C0f7d3D23a26bf1E8433a263b72066577",
+    "implementation": "0xeB5360a0C255694728222A5AAAEC185568a72239",
     "verified": true,
-    "description": "AI-powered oracle for task optimization and demand forecasting",
+    "description": "AI-powered oracle for task optimization and demand forecasting (Fixed with correct LINK token)",
     "blockscout": {
-      "proxy": "https://base-sepolia.blockscout.com/address/0xFa62d464be301ed9378312fc34d82B2121311fE8",
-      "implementation": "https://base-sepolia.blockscout.com/address/0xb5c8dfeda4bb05f4addcb8608924e9af0ba6d129"
+      "proxy": "https://base-sepolia.blockscout.com/address/0xC891E58C0f7d3D23a26bf1E8433a263b72066577",
+      "implementation": "https://base-sepolia.blockscout.com/address/0xeB5360a0C255694728222A5AAAEC185568a72239"
     }
   },
   "NodeRegistry": {
