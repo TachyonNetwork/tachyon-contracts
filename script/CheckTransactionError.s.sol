@@ -5,14 +5,13 @@ import "forge-std/Script.sol";
 import "forge-std/console.sol";
 
 contract CheckTransactionError is Script {
-    
     function run() external view {
         // Check the failed transaction
         bytes32 txHash = 0x0a49fe72039923fe77635341c2e7aaf25134989a4173de20da544faeed3fb12e;
-        
+
         console.log("=== Analyzing Failed Transaction ===");
         console.log("Transaction hash:", vm.toString(txHash));
-        
+
         // Try to get transaction details
         // Note: This is a view-only analysis, we can't replay the exact transaction
         console.log("Transaction failed with status 0 (reverted)");
@@ -22,7 +21,7 @@ contract CheckTransactionError is Script {
         console.log("3. Access control restriction");
         console.log("4. Contract paused state");
         console.log("5. Gas limit exceeded");
-        
+
         console.log("");
         console.log("=== Next Steps ===");
         console.log("1. Check JobManager contract state");

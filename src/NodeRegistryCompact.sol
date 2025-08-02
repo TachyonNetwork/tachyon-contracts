@@ -144,7 +144,7 @@ contract NodeRegistryCompact is
     mapping(uint256 => uint256) public dailyRegistrations;
     uint256 public lastUpdateDay;
     bool public emergencyGrowthPause;
-    
+
     // Upgrade safety variables
     address public previousImplementation;
     uint256 public upgradeTimestamp;
@@ -153,11 +153,11 @@ contract NodeRegistryCompact is
     event NodeUnregistered(address indexed node, uint256 returnedStake);
     event NodeSlashed(address indexed node, uint256 slashedAmount, string reason);
     event DeviceProfileUpdated(NodeDeviceType indexed deviceType, uint256 minStakeRequired);
-    
+
     // Safe upgrade events
     event UpgradeAuthorized(address indexed newImplementation, uint256 timestamp);
     event RollbackExecuted(address indexed fromImplementation, address indexed toImplementation, uint256 timestamp);
-    
+
     // Growth control events
     event SuspiciousGrowthDetected(address indexed caller, uint256 nodeCount, uint256 timestamp);
     event GrowthLimitsUpdated(uint256 maxPerTransaction, uint256 suspiciousThreshold, uint256 maxDaily);
@@ -190,7 +190,7 @@ contract NodeRegistryCompact is
         slashingPercentage = 10;
         inactivityThreshold = 7 days;
         mobilePowerSaveThreshold = 20;
-        
+
         // Initialize adaptive growth controls
         maxNodesPerTransaction = 100;
         suspiciousGrowthThreshold = 1000;
@@ -201,39 +201,50 @@ contract NodeRegistryCompact is
         // TESTING: Very minimal stakes for testnet
         deviceProfiles[NodeDeviceType.SMARTPHONE] = DeviceProfile(1e12, 1, 4, 4, 32, 10, 95, 60, false, false, true);
         deviceProfiles[NodeDeviceType.TABLET] = DeviceProfile(2e12, 2, 4, 4, 64, 25, 90, 65, false, true, true);
-        deviceProfiles[NodeDeviceType.RASPBERRY_PI_4] = DeviceProfile(25e18, 2, 4, 4, 32, 100, 85, 85, true, false, true);
-        deviceProfiles[NodeDeviceType.RASPBERRY_PI_5] = DeviceProfile(35e18, 3, 4, 8, 64, 100, 88, 90, true, false, true);
-        deviceProfiles[NodeDeviceType.LAPTOP_CONSUMER] = DeviceProfile(200e18, 5, 4, 8, 256, 50, 70, 75, true, true, true);
-        deviceProfiles[NodeDeviceType.WORKSTATION] = DeviceProfile(1000e18, 15, 8, 32, 1000, 500, 60, 90, true, true, true);
-        deviceProfiles[NodeDeviceType.GAMING_RIG] = DeviceProfile(1500e18, 20, 8, 32, 2000, 500, 50, 85, true, true, true);
-        deviceProfiles[NodeDeviceType.SERVER_TOWER] = DeviceProfile(5000e18, 50, 16, 128, 4000, 1000, 70, 95, true, true, false);
-        deviceProfiles[NodeDeviceType.SERVER_RACK_2U] = DeviceProfile(12000e18, 100, 32, 512, 16000, 5000, 70, 99, true, true, false);
-        deviceProfiles[NodeDeviceType.AWS_EC2_INSTANCE] = DeviceProfile(10000e18, 100, 16, 64, 1000, 5000, 80, 99, true, true, true);
-        deviceProfiles[NodeDeviceType.QUANTUM_SIMULATOR] = DeviceProfile(100000e18, 5, 32, 256, 10000, 10000, 40, 95, true, true, false);
-        deviceProfiles[NodeDeviceType.CUSTOM_DEVICE] = DeviceProfile(1000e18, 5, 4, 8, 256, 100, 70, 80, true, false, true);
+        deviceProfiles[NodeDeviceType.RASPBERRY_PI_4] =
+            DeviceProfile(25e18, 2, 4, 4, 32, 100, 85, 85, true, false, true);
+        deviceProfiles[NodeDeviceType.RASPBERRY_PI_5] =
+            DeviceProfile(35e18, 3, 4, 8, 64, 100, 88, 90, true, false, true);
+        deviceProfiles[NodeDeviceType.LAPTOP_CONSUMER] =
+            DeviceProfile(200e18, 5, 4, 8, 256, 50, 70, 75, true, true, true);
+        deviceProfiles[NodeDeviceType.WORKSTATION] =
+            DeviceProfile(1000e18, 15, 8, 32, 1000, 500, 60, 90, true, true, true);
+        deviceProfiles[NodeDeviceType.GAMING_RIG] =
+            DeviceProfile(1500e18, 20, 8, 32, 2000, 500, 50, 85, true, true, true);
+        deviceProfiles[NodeDeviceType.SERVER_TOWER] =
+            DeviceProfile(5000e18, 50, 16, 128, 4000, 1000, 70, 95, true, true, false);
+        deviceProfiles[NodeDeviceType.SERVER_RACK_2U] =
+            DeviceProfile(12000e18, 100, 32, 512, 16000, 5000, 70, 99, true, true, false);
+        deviceProfiles[NodeDeviceType.AWS_EC2_INSTANCE] =
+            DeviceProfile(10000e18, 100, 16, 64, 1000, 5000, 80, 99, true, true, true);
+        deviceProfiles[NodeDeviceType.QUANTUM_SIMULATOR] =
+            DeviceProfile(100000e18, 5, 32, 256, 10000, 10000, 40, 95, true, true, false);
+        deviceProfiles[NodeDeviceType.CUSTOM_DEVICE] =
+            DeviceProfile(1000e18, 5, 4, 8, 256, 100, 70, 80, true, false, true);
 
-        isMobileDevice[NodeDeviceType.SMARTPHONE] = isMobileDevice[NodeDeviceType.TABLET] = isMobileDevice[NodeDeviceType.LAPTOP_CONSUMER] = true;
+        isMobileDevice[NodeDeviceType.SMARTPHONE] =
+            isMobileDevice[NodeDeviceType.TABLET] = isMobileDevice[NodeDeviceType.LAPTOP_CONSUMER] = true;
         isServerDevice[NodeDeviceType.SERVER_TOWER] = isServerDevice[NodeDeviceType.SERVER_RACK_2U] = true;
     }
 
     // Growth control modifier
     modifier validateGrowthRate(uint256 newNodesCount) {
         require(!emergencyGrowthPause, "Emergency growth pause active");
-        
+
         uint256 currentDay = block.timestamp / 1 days;
         if (currentDay != lastUpdateDay) {
             lastUpdateDay = currentDay;
             dailyRegistrations[currentDay] = 0;
         }
-        
+
         uint256 adaptiveLimit = calculateAdaptiveLimit();
         require(dailyRegistrations[currentDay] + newNodesCount <= adaptiveLimit, "Daily growth limit exceeded");
-        
+
         if (newNodesCount > suspiciousGrowthThreshold) {
             emit SuspiciousGrowthDetected(msg.sender, newNodesCount, block.timestamp);
             require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Large registration requires admin");
         }
-        
+
         _;
         dailyRegistrations[currentDay] += newNodesCount;
     }
@@ -318,7 +329,7 @@ contract NodeRegistryCompact is
     function calculateAdaptiveLimit() public view returns (uint256) {
         uint256 networkSize = activeNodes.length;
         uint256 baseLimit = maxDailyNodeGrowth;
-        
+
         if (networkSize < 10000) {
             return baseLimit;
         } else if (networkSize < 100000) {
@@ -329,7 +340,7 @@ contract NodeRegistryCompact is
             return baseLimit * 50;
         }
     }
-    
+
     function updateGrowthLimits(
         uint256 _maxNodesPerTransaction,
         uint256 _suspiciousGrowthThreshold,
@@ -337,19 +348,19 @@ contract NodeRegistryCompact is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_maxNodesPerTransaction > 0 && _maxNodesPerTransaction <= 10000, "Invalid transaction limit");
         require(_maxDailyNodeGrowth > _maxNodesPerTransaction, "Daily limit too low");
-        
+
         maxNodesPerTransaction = _maxNodesPerTransaction;
         suspiciousGrowthThreshold = _suspiciousGrowthThreshold;
         maxDailyNodeGrowth = _maxDailyNodeGrowth;
-        
+
         emit GrowthLimitsUpdated(_maxNodesPerTransaction, _suspiciousGrowthThreshold, _maxDailyNodeGrowth);
     }
-    
+
     function emergencyPauseGrowth() external onlyRole(DEFAULT_ADMIN_ROLE) {
         emergencyGrowthPause = true;
         emit EmergencyGrowthPaused(block.timestamp);
     }
-    
+
     function resumeGrowth() external onlyRole(DEFAULT_ADMIN_ROLE) {
         emergencyGrowthPause = false;
         emit GrowthResumed(block.timestamp);
@@ -358,26 +369,20 @@ contract NodeRegistryCompact is
     function rollback() external onlyOwner {
         require(block.timestamp <= upgradeTimestamp + ROLLBACK_WINDOW, "Rollback window expired");
         require(previousImplementation != address(0), "No previous implementation");
-        
+
         address current = ERC1967Utils.getImplementation();
         ERC1967Utils.upgradeToAndCall(previousImplementation, "");
-        
+
         emit RollbackExecuted(current, previousImplementation, block.timestamp);
     }
 
-    function getNetworkGrowthStats() external view returns (
-        uint256 currentDayRegistrations,
-        uint256 adaptiveLimit,
-        bool growthPaused,
-        uint256 networkSize
-    ) {
+    function getNetworkGrowthStats()
+        external
+        view
+        returns (uint256 currentDayRegistrations, uint256 adaptiveLimit, bool growthPaused, uint256 networkSize)
+    {
         uint256 currentDay = block.timestamp / 1 days;
-        return (
-            dailyRegistrations[currentDay],
-            calculateAdaptiveLimit(),
-            emergencyGrowthPause,
-            activeNodes.length
-        );
+        return (dailyRegistrations[currentDay], calculateAdaptiveLimit(), emergencyGrowthPause, activeNodes.length);
     }
 
     function _removeFromActiveNodes(address nodeAddress) internal {
@@ -395,22 +400,22 @@ contract NodeRegistryCompact is
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
         previousImplementation = ERC1967Utils.getImplementation();
         upgradeTimestamp = block.timestamp;
-        
+
         require(newImplementation.code.length > 0, "No code at implementation");
-        
+
         try IStorageCompatible(newImplementation).getStorageLayoutHash() returns (bytes32 newHash) {
             require(_isCompatibleLayout(STORAGE_LAYOUT_HASH, newHash), "Incompatible storage layout");
         } catch {
             // Allow for testnet flexibility
         }
-        
+
         emit UpgradeAuthorized(newImplementation, block.timestamp);
     }
 
     function _isCompatibleLayout(bytes32 oldHash, bytes32 newHash) internal pure returns (bool) {
         return oldHash == newHash || newHash == keccak256(abi.encode(oldHash, "compatible"));
     }
-    
+
     function getStorageLayoutHash() external pure returns (bytes32) {
         return STORAGE_LAYOUT_HASH;
     }
@@ -420,14 +425,10 @@ contract NodeRegistryCompact is
     }
 
     // Add getNodeDetails for JobManager compatibility
-    function getNodeDetails(address nodeAddress) 
-        external 
-        view 
-        returns (
-            NodeInfo memory nodeInfo,
-            DeviceProfile memory profile,
-            ResourceAttestation memory attestation
-        ) 
+    function getNodeDetails(address nodeAddress)
+        external
+        view
+        returns (NodeInfo memory nodeInfo, DeviceProfile memory profile, ResourceAttestation memory attestation)
     {
         nodeInfo = nodes[nodeAddress];
         profile = nodeInfo.deviceProfile;
