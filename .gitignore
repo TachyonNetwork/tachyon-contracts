@@ -82,3 +82,7 @@ test-failures/
 
 # Contract verification files
 verify-*.txt
+
+# Backend directories (separate repositories)
+go-backend/
+tachyon-backend/

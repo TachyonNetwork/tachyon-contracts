@@ -40,12 +40,12 @@
     }
   },
   "NodeRegistry": {
-    "proxy": "0xD4Ee0c98c70D83549916815B8e934b2436AFe9D1",
+    "proxy": "0xF619343016DD4c863D56A8bC8fDC033Dd023E9F7",
     "implementation": "0x171b0c3b0e3766D7eA714eCAc4951589F6793507",
     "verified": true,
-    "description": "Node registry with mobile device support and tiered staking",
+    "description": "Node registry with mobile device support, tiered staking, and adaptive growth controls (Compact version)",
     "blockscout": {
-      "proxy": "https://base-sepolia.blockscout.com/address/0xd4ee0c98c70d83549916815b8e934b2436afe9d1",
+      "proxy": "https://base-sepolia.blockscout.com/address/0xF619343016DD4c863D56A8bC8fDC033Dd023E9F7",
       "implementation": "https://base-sepolia.blockscout.com/address/0x171b0c3b0e3766d7ea714ecac4951589f6793507"
     }
   },
