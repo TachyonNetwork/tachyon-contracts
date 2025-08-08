@@ -86,6 +86,7 @@ contract JobManager is
         JobStatus status;
         ResourceRequirements requirements;
         uint256 payment;
+        uint256 stableAmount; // amount in ERC20 when using escrow
         uint256 createdAt;
         uint256 deadline;
         bytes32 dataHash;
@@ -95,6 +96,7 @@ contract JobManager is
         bool preferGreenNodes;
         uint256 completedAt;
         bytes32 resultHash;
+        bool usesEscrow; // when true, ComputeEscrow handles payout/refund
     }
 
     // AI-driven pricing structure
@@ -209,6 +211,7 @@ contract JobManager is
             status: JobStatus.CREATED,
             requirements: requirements,
             payment: payment,
+            stableAmount: 0,
             createdAt: block.timestamp,
             deadline: deadline,
             dataHash: dataHash,
@@ -217,7 +220,8 @@ contract JobManager is
             assignedAt: 0,
             preferGreenNodes: preferGreenNodes,
             completedAt: 0,
-            resultHash: bytes32(0)
+            resultHash: bytes32(0),
+            usesEscrow: false
         });
 
         // Update indices
@@ -234,6 +238,58 @@ contract JobManager is
         // Trigger AI optimization for job assignment
         _requestAIOptimization(jobId);
 
+        return jobId;
+    }
+
+    // @notice Create a job funded via external ERC20 escrow (e.g., USDC)
+    function createJobWithEscrow(
+        JobType jobType,
+        Priority priority,
+        ResourceRequirements calldata requirements,
+        uint256 stableAmount,
+        uint256 deadline,
+        string calldata ipfsHash,
+        bool preferGreenNodes
+    ) external whenNotPaused nonReentrant returns (uint256 jobId) {
+        require(address(computeEscrow) != address(0), "Escrow not set");
+        require(stableAmount > 0, "Amount required");
+        require(deadline > block.timestamp && deadline <= block.timestamp + maxJobDuration, "Invalid deadline");
+        require(bytes(ipfsHash).length > 0 && requirements.estimatedDurationMinutes > 0, "Invalid args");
+
+        jobId = nextJobId++;
+        bytes32 dataHash = keccak256(abi.encodePacked(jobId, msg.sender, ipfsHash));
+
+        jobs[jobId] = Job({
+            jobId: jobId,
+            client: msg.sender,
+            jobType: jobType,
+            priority: priority,
+            status: JobStatus.CREATED,
+            requirements: requirements,
+            payment: 0,
+            stableAmount: stableAmount,
+            createdAt: block.timestamp,
+            deadline: deadline,
+            dataHash: dataHash,
+            ipfsHash: ipfsHash,
+            assignedNode: address(0),
+            assignedAt: 0,
+            preferGreenNodes: preferGreenNodes,
+            completedAt: 0,
+            resultHash: bytes32(0),
+            usesEscrow: true
+        });
+
+        clientJobs[msg.sender].push(jobId);
+        jobTypeCount[jobType]++;
+        totalJobsCreated++;
+        ipfsHashToJobId[keccak256(bytes(ipfsHash))] = jobId;
+        _addToQueues(jobId, priority, jobType, preferGreenNodes);
+        emit JobCreated(jobId, msg.sender, jobType, stableAmount, preferGreenNodes);
+
+        // initialize escrow entry; payer funds via separate approve+fundEscrow
+        computeEscrow.createEscrow(jobId, msg.sender, stableAmount);
+        _requestAIOptimization(jobId);
         return jobId;
     }
 
@@ -321,8 +377,13 @@ contract JobManager is
         require(msg.sender == job.client || hasRole(JOB_VALIDATOR_ROLE, msg.sender), "Unauthorized to settle");
 
         jobSettled[jobId] = true;
-        require(tachyonToken.transfer(job.assignedNode, job.payment), "Payout failed");
-        emit JobSettled(jobId, job.assignedNode, job.payment);
+        if (job.usesEscrow) {
+            computeEscrow.release(jobId, job.assignedNode);
+            emit JobSettled(jobId, job.assignedNode, job.stableAmount);
+        } else {
+            require(tachyonToken.transfer(job.assignedNode, job.payment), "Payout failed");
+            emit JobSettled(jobId, job.assignedNode, job.payment);
+        }
     }
 
     // @notice Cancel a job (by client or admin)
@@ -334,7 +395,11 @@ contract JobManager is
         job.status = JobStatus.CANCELLED;
 
         // Refund payment to client
-        require(tachyonToken.transfer(job.client, job.payment), "Refund failed");
+        if (job.usesEscrow) {
+            computeEscrow.refund(jobId);
+        } else {
+            require(tachyonToken.transfer(job.client, job.payment), "Refund failed");
+        }
 
         emit JobCancelled(jobId, job.client, reason);
 
