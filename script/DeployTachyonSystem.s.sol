@@ -167,7 +167,8 @@ contract DeployTachyonSystem is Script {
         contracts.computeEscrowImpl = address(escrowImpl);
 
         // For testnets, set token to TachyonToken or mock USDC; replace with USDC on prod
-        bytes memory escrowInit = abi.encodeWithSelector(ComputeEscrow.initialize.selector, contracts.tachyonTokenProxy, config.initialOwner);
+        bytes memory escrowInit =
+            abi.encodeWithSelector(ComputeEscrow.initialize.selector, contracts.tachyonTokenProxy, config.initialOwner);
         ERC1967Proxy escrowProxy = new ERC1967Proxy(address(escrowImpl), escrowInit);
         contracts.computeEscrowProxy = address(escrowProxy);
 

@@ -13,7 +13,14 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  * @title ComputeEscrow
  * @notice USDC (or any ERC20) escrow for job payments, controlled by JobManager
  */
-contract ComputeEscrow is Initializable, AccessControlUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable, UUPSUpgradeable {
+contract ComputeEscrow is
+    Initializable,
+    AccessControlUpgradeable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable,
+    UUPSUpgradeable
+{
     bytes32 public constant ESCROW_ADMIN_ROLE = keccak256("ESCROW_ADMIN_ROLE");
     bytes32 public constant JOB_MANAGER_ROLE = keccak256("JOB_MANAGER_ROLE");
 
@@ -54,18 +61,16 @@ contract ComputeEscrow is Initializable, AccessControlUpgradeable, OwnableUpgrad
         _grantRole(ESCROW_ADMIN_ROLE, initialOwner);
     }
 
-    function createEscrow(uint256 jobId, address payer, uint256 amount) external whenNotPaused onlyRole(JOB_MANAGER_ROLE) {
+    function createEscrow(uint256 jobId, address payer, uint256 amount)
+        external
+        whenNotPaused
+        onlyRole(JOB_MANAGER_ROLE)
+    {
         require(escrows[jobId].payer == address(0), "Escrow exists");
         require(payer != address(0) && amount > 0, "Invalid params");
 
-        escrows[jobId] = Escrow({
-            payer: payer,
-            payee: address(0),
-            amount: amount,
-            funded: false,
-            released: false,
-            refunded: false
-        });
+        escrows[jobId] =
+            Escrow({payer: payer, payee: address(0), amount: amount, funded: false, released: false, refunded: false});
 
         emit EscrowCreated(jobId, payer, amount);
     }
@@ -89,7 +94,12 @@ contract ComputeEscrow is Initializable, AccessControlUpgradeable, OwnableUpgrad
         emit EscrowPayeeSet(jobId, payee);
     }
 
-    function release(uint256 jobId, address payeeOverride) external nonReentrant whenNotPaused onlyRole(JOB_MANAGER_ROLE) {
+    function release(uint256 jobId, address payeeOverride)
+        external
+        nonReentrant
+        whenNotPaused
+        onlyRole(JOB_MANAGER_ROLE)
+    {
         Escrow storage e = escrows[jobId];
         require(e.payer != address(0), "No escrow");
         require(e.funded && !e.released && !e.refunded, "Invalid state");
@@ -111,8 +121,13 @@ contract ComputeEscrow is Initializable, AccessControlUpgradeable, OwnableUpgrad
         emit EscrowRefunded(jobId, e.payer, e.amount);
     }
 
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) { _pause(); }
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) { _unpause(); }
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+    }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }

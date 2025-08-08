@@ -136,10 +136,7 @@ contract NodeRegistry is
 
     // Modifiers
     modifier onlyTaskManagerOrAdmin() {
-        require(
-            hasRole(TASK_MANAGER_ROLE, msg.sender) || hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
-            "Not task manager"
-        );
+        require(hasRole(TASK_MANAGER_ROLE, msg.sender) || hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Not task manager");
         _;
     }
 
@@ -289,8 +286,7 @@ contract NodeRegistry is
 
     function updateReputation(address nodeAddress, bool taskSuccessful) external {
         require(
-            hasRole(REPUTATION_UPDATER_ROLE, msg.sender) || hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
-            "Not authorized"
+            hasRole(REPUTATION_UPDATER_ROLE, msg.sender) || hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Not authorized"
         );
         NodeInfo storage node = nodes[nodeAddress];
         require(node.registered, "Not registered");
