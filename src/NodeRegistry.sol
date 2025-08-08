@@ -23,6 +23,8 @@ contract NodeRegistry is
 {
     bytes32 public constant ATTESTOR_ROLE = keccak256("ATTESTOR_ROLE");
     bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
+    bytes32 public constant REPUTATION_UPDATER_ROLE = keccak256("REPUTATION_UPDATER_ROLE");
+    bytes32 public constant TASK_MANAGER_ROLE = keccak256("TASK_MANAGER_ROLE");
 
     TachyonToken public tachyonToken;
     GreenVerifier public greenVerifier;
@@ -132,6 +134,15 @@ contract NodeRegistry is
     uint256 public totalStaked;
     uint256 public totalComputePower;
 
+    // Modifiers
+    modifier onlyTaskManagerOrAdmin() {
+        require(
+            hasRole(TASK_MANAGER_ROLE, msg.sender) || hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+            "Not task manager"
+        );
+        _;
+    }
+
     event NodeRegistered(address indexed node, uint256 stake, bytes32 attestationHash);
     event NodeUnregistered(address indexed node, uint256 returnedStake);
     event NodeSlashed(address indexed node, uint256 slashedAmount, string reason);
@@ -157,6 +168,7 @@ contract NodeRegistry is
 
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(ATTESTOR_ROLE, initialOwner);
+        _grantRole(TASK_MANAGER_ROLE, initialOwner);
 
         // Set configuration values
         slashingPercentage = 10;
@@ -271,10 +283,15 @@ contract NodeRegistry is
         uint256 slashAmount = (node.stake * slashingPercentage) / 100;
         node.stake -= slashAmount;
         node.reputation = node.reputation > 20 ? node.reputation - 20 : 0;
+        slashedNodes[nodeAddress] = true;
         emit NodeSlashed(nodeAddress, slashAmount, reason);
     }
 
-    function updateReputation(address nodeAddress, bool taskSuccessful) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateReputation(address nodeAddress, bool taskSuccessful) external {
+        require(
+            hasRole(REPUTATION_UPDATER_ROLE, msg.sender) || hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+            "Not authorized"
+        );
         NodeInfo storage node = nodes[nodeAddress];
         require(node.registered, "Not registered");
         if (taskSuccessful) {
@@ -366,13 +383,14 @@ contract NodeRegistry is
             && (!isMobileDevice[node.capabilities.deviceType] || !node.isPowerSaving);
     }
 
-    function incrementActiveTasks(address nodeAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function incrementActiveTasks(address nodeAddress) external onlyTaskManagerOrAdmin {
         require(nodes[nodeAddress].registered, "Not registered");
         nodes[nodeAddress].activeTasks++;
     }
 
-    function decrementActiveTasks(address nodeAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function decrementActiveTasks(address nodeAddress) external onlyTaskManagerOrAdmin {
         require(nodes[nodeAddress].registered, "Not registered");
+        require(nodes[nodeAddress].activeTasks > 0, "No active tasks");
         nodes[nodeAddress].activeTasks--;
     }
 

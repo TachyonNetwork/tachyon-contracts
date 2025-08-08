@@ -12,10 +12,7 @@ import "../src/RewardManager.sol";
 import "../src/JobManager.sol";
 
 contract UpgradeTachyonSystem is Script {
-    // Existing deployment addresses
-    address constant TACHYON_TOKEN_PROXY = 0x2364b88237866CD8561866980bD2f12a6c14819E;
-
-    // Chainlink configuration for Base Sepolia
+    // Chainlink configuration (optional; used only if deploying AIOracle proxy)
     struct ChainlinkConfig {
         address linkToken;
         address oracle;
@@ -23,6 +20,7 @@ contract UpgradeTachyonSystem is Script {
         uint256 fee;
     }
 
+    // Proxies loaded from .env
     struct ExistingContracts {
         address tachyonTokenProxy;
         address greenVerifierProxy;
@@ -49,15 +47,12 @@ contract UpgradeTachyonSystem is Script {
         console.log("Upgrading Tachyon System contracts...");
         console.log("Deployer address:", deployer);
 
-        // Get Chainlink configuration
-        ChainlinkConfig memory chainlinkConfig = getChainlinkConfig();
-
         // Deploy new implementations
         NewImplementations memory newImpls = deployNewImplementations();
 
         // Upgrade existing contracts
-        ExistingContracts memory existing = getExistingContracts();
-        performUpgrades(existing, newImpls, chainlinkConfig, deployer);
+        ExistingContracts memory existing = loadExistingContractsFromEnv();
+        performUpgrades(existing, newImpls, deployer);
 
         // Log results
         logUpgradeResults(existing, newImpls);
@@ -65,24 +60,14 @@ contract UpgradeTachyonSystem is Script {
         vm.stopBroadcast();
     }
 
-    function getChainlinkConfig() internal pure returns (ChainlinkConfig memory) {
-        return ChainlinkConfig({
-            linkToken: 0x036CbD53842c5426634e7929541eC2318f3dCF7e, // LINK on Base Sepolia
-            oracle: 0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD,
-            jobId: bytes32("7d80a6386ef543a3abb52817f6707e3b"),
-            fee: 0.1 * 10 ** 18
-        });
-    }
-
-    function getExistingContracts() internal pure returns (ExistingContracts memory) {
-        return ExistingContracts({
-            tachyonTokenProxy: TACHYON_TOKEN_PROXY,
-            greenVerifierProxy: address(0), // Will deploy new if not exists
-            aiOracleProxy: address(0),
-            nodeRegistryProxy: address(0),
-            rewardManagerProxy: address(0),
-            jobManagerProxy: address(0)
-        });
+    function loadExistingContractsFromEnv() internal returns (ExistingContracts memory c) {
+        // Require proxies in .env; if any is intentionally missing, set to 0x0 in env or remove
+        c.tachyonTokenProxy = vm.envAddress("TACHYON_TOKEN_PROXY");
+        c.greenVerifierProxy = vm.envAddress("GREEN_VERIFIER_PROXY");
+        c.aiOracleProxy = vm.envAddress("AI_ORACLE_PROXY");
+        c.nodeRegistryProxy = vm.envAddress("NODE_REGISTRY_PROXY");
+        c.rewardManagerProxy = vm.envAddress("REWARD_MANAGER_PROXY");
+        c.jobManagerProxy = vm.envAddress("JOB_MANAGER_PROXY");
     }
 
     function deployNewImplementations() internal returns (NewImplementations memory impls) {
@@ -104,135 +89,69 @@ contract UpgradeTachyonSystem is Script {
         console.log("New JobManager implementation:", impls.jobManagerImpl);
     }
 
-    function performUpgrades(
-        ExistingContracts memory existing,
-        NewImplementations memory newImpls,
-        ChainlinkConfig memory chainlinkConfig,
-        address deployer
-    ) internal {
+    function performUpgrades(ExistingContracts memory existing, NewImplementations memory newImpls, address deployer)
+        internal
+    {
         console.log("Performing upgrades...");
 
-        // 1. Upgrade TachyonToken (existing proxy)
-        upgradeTachyonToken(existing.tachyonTokenProxy, newImpls.tachyonTokenImpl);
-
-        // 2. Deploy missing contracts with proxies
-        if (existing.greenVerifierProxy == address(0)) {
-            existing.greenVerifierProxy = deployGreenVerifierProxy(newImpls.greenVerifierImpl, deployer);
-        }
-
-        if (existing.aiOracleProxy == address(0)) {
-            existing.aiOracleProxy = deployAIOracleProxy(newImpls.aiOracleImpl, chainlinkConfig, deployer);
-        }
-
-        if (existing.nodeRegistryProxy == address(0)) {
-            existing.nodeRegistryProxy = deployNodeRegistryProxy(
-                newImpls.nodeRegistryImpl,
-                existing.tachyonTokenProxy,
-                existing.greenVerifierProxy,
-                existing.aiOracleProxy,
-                deployer
-            );
-        }
-
-        if (existing.rewardManagerProxy == address(0)) {
-            existing.rewardManagerProxy = deployRewardManagerProxy(
-                newImpls.rewardManagerImpl,
-                existing.tachyonTokenProxy,
-                existing.greenVerifierProxy,
-                existing.aiOracleProxy,
-                deployer
-            );
-        }
-
-        if (existing.jobManagerProxy == address(0)) {
-            existing.jobManagerProxy = deployJobManagerProxy(
-                newImpls.jobManagerImpl,
-                existing.tachyonTokenProxy,
-                existing.nodeRegistryProxy,
-                existing.aiOracleProxy,
-                existing.greenVerifierProxy,
-                deployer
-            );
-        }
+        // 1. Upgrade all existing proxies using addresses from .env
+        upgradeTachyonToken(existing.tachyonTokenProxy, newImpls.tachyonTokenImpl, deployer);
+        upgradeGreenVerifier(existing.greenVerifierProxy, newImpls.greenVerifierImpl, deployer);
+        upgradeAIOracle(existing.aiOracleProxy, newImpls.aiOracleImpl, deployer);
+        upgradeNodeRegistry(existing.nodeRegistryProxy, newImpls.nodeRegistryImpl, deployer);
+        upgradeRewardManager(existing.rewardManagerProxy, newImpls.rewardManagerImpl, deployer);
+        upgradeJobManager(existing.jobManagerProxy, newImpls.jobManagerImpl, deployer);
 
         // Grant roles between contracts
         setupContractIntegration(existing, deployer);
     }
 
-    function upgradeTachyonToken(address proxy, address newImpl) internal {
+    function upgradeTachyonToken(address proxy, address newImpl, address deployer) internal {
         console.log("Upgrading TachyonToken proxy to new implementation...");
         TachyonToken tokenProxy = TachyonToken(payable(proxy));
+        require(tokenProxy.owner() == deployer, "TachyonToken: not owner");
         tokenProxy.upgradeToAndCall(newImpl, "");
         console.log("TachyonToken upgraded successfully");
     }
 
-    function deployGreenVerifierProxy(address impl, address owner) internal returns (address) {
-        bytes memory initData = abi.encodeWithSelector(GreenVerifier.initialize.selector, owner);
-        ERC1967Proxy proxy = new ERC1967Proxy(impl, initData);
-        console.log("GreenVerifier proxy deployed at:", address(proxy));
-        return address(proxy);
+    function upgradeGreenVerifier(address proxy, address newImpl, address deployer) internal {
+        console.log("Upgrading GreenVerifier proxy to new implementation...");
+        GreenVerifier gv = GreenVerifier(proxy);
+        require(gv.owner() == deployer, "GreenVerifier: not owner");
+        gv.upgradeToAndCall(newImpl, "");
+        console.log("GreenVerifier upgraded successfully");
     }
 
-    function deployAIOracleProxy(address impl, ChainlinkConfig memory config, address owner)
-        internal
-        returns (address)
-    {
-        bytes memory initData = abi.encodeWithSelector(
-            AIOracle.initialize.selector, config.linkToken, config.oracle, config.jobId, config.fee, owner
-        );
-        ERC1967Proxy proxy = new ERC1967Proxy(impl, initData);
-        console.log("AIOracle proxy deployed at:", address(proxy));
-        return address(proxy);
+    function upgradeAIOracle(address proxy, address newImpl, address deployer) internal {
+        console.log("Upgrading AIOracle proxy to new implementation...");
+        AIOracle ai = AIOracle(proxy);
+        require(ai.owner() == deployer, "AIOracle: not owner");
+        ai.upgradeToAndCall(newImpl, "");
+        console.log("AIOracle upgraded successfully");
     }
 
-    function deployNodeRegistryProxy(
-        address impl,
-        address tachyonToken,
-        address greenVerifier,
-        address aiOracle,
-        address owner
-    ) internal returns (address) {
-        bytes memory initData =
-            abi.encodeWithSelector(NodeRegistry.initialize.selector, tachyonToken, greenVerifier, aiOracle, owner);
-        ERC1967Proxy proxy = new ERC1967Proxy(impl, initData);
-        console.log("NodeRegistry proxy deployed at:", address(proxy));
-        return address(proxy);
+    function upgradeNodeRegistry(address proxy, address newImpl, address deployer) internal {
+        console.log("Upgrading NodeRegistry proxy to new implementation...");
+        NodeRegistry node = NodeRegistry(proxy);
+        require(node.owner() == deployer, "NodeRegistry: not owner");
+        node.upgradeToAndCall(newImpl, "");
+        console.log("NodeRegistry upgraded successfully");
     }
 
-    function deployRewardManagerProxy(
-        address impl,
-        address tachyonToken,
-        address greenVerifier,
-        address aiOracle,
-        address owner
-    ) internal returns (address) {
-        bytes memory initData = abi.encodeWithSelector(
-            RewardManager.initialize.selector,
-            tachyonToken,
-            greenVerifier,
-            aiOracle,
-            address(0), // zkVerifier - placeholder
-            owner
-        );
-        ERC1967Proxy proxy = new ERC1967Proxy(impl, initData);
-        console.log("RewardManager proxy deployed at:", address(proxy));
-        return address(proxy);
+    function upgradeRewardManager(address proxy, address newImpl, address deployer) internal {
+        console.log("Upgrading RewardManager proxy to new implementation...");
+        RewardManager rm = RewardManager(proxy);
+        require(rm.owner() == deployer, "RewardManager: not owner");
+        rm.upgradeToAndCall(newImpl, "");
+        console.log("RewardManager upgraded successfully");
     }
 
-    function deployJobManagerProxy(
-        address impl,
-        address tachyonToken,
-        address nodeRegistry,
-        address aiOracle,
-        address greenVerifier,
-        address owner
-    ) internal returns (address) {
-        bytes memory initData = abi.encodeWithSelector(
-            JobManager.initialize.selector, tachyonToken, nodeRegistry, aiOracle, greenVerifier, owner
-        );
-        ERC1967Proxy proxy = new ERC1967Proxy(impl, initData);
-        console.log("JobManager proxy deployed at:", address(proxy));
-        return address(proxy);
+    function upgradeJobManager(address proxy, address newImpl, address deployer) internal {
+        console.log("Upgrading JobManager proxy to new implementation...");
+        JobManager jm = JobManager(proxy);
+        require(jm.owner() == deployer, "JobManager: not owner");
+        jm.upgradeToAndCall(newImpl, "");
+        console.log("JobManager upgraded successfully");
     }
 
     function setupContractIntegration(ExistingContracts memory contracts, address deployer) internal {
@@ -246,6 +165,10 @@ contract UpgradeTachyonSystem is Script {
         AIOracle aiOracle = AIOracle(contracts.aiOracleProxy);
         aiOracle.grantRole(aiOracle.AI_CONSUMER_ROLE(), contracts.jobManagerProxy);
         aiOracle.grantRole(aiOracle.AI_CONSUMER_ROLE(), contracts.nodeRegistryProxy);
+
+        // Ensure JobManager can manage node active task counters post-upgrade
+        NodeRegistry nodeRegistry = NodeRegistry(contracts.nodeRegistryProxy);
+        nodeRegistry.grantRole(nodeRegistry.TASK_MANAGER_ROLE(), contracts.jobManagerProxy);
 
         console.log("Contract integration setup complete");
     }

@@ -182,6 +182,14 @@ contract DeployTachyonSystem is Script {
         nodeRegistry.grantRole(nodeRegistry.SLASHER_ROLE(), contracts.rewardManagerProxy);
         console.log("Granted SLASHER_ROLE to RewardManager");
 
+        // Grant REPUTATION_UPDATER_ROLE to JobManager
+        nodeRegistry.grantRole(nodeRegistry.REPUTATION_UPDATER_ROLE(), contracts.jobManagerProxy);
+        console.log("Granted REPUTATION_UPDATER_ROLE to JobManager");
+
+        // Grant TASK_MANAGER_ROLE to JobManager to manage active task counters
+        nodeRegistry.grantRole(nodeRegistry.TASK_MANAGER_ROLE(), contracts.jobManagerProxy);
+        console.log("Granted TASK_MANAGER_ROLE to JobManager");
+
         // Grant ORACLE_ROLE to deployer (temporary - should be energy providers)
         GreenVerifier greenVerifier = GreenVerifier(contracts.greenVerifierProxy);
         greenVerifier.grantRole(greenVerifier.ORACLE_ROLE(), config.initialOwner);

@@ -123,6 +123,7 @@ contract JobManager is
     uint256[] public priorityQueue;
     uint256[] public greenPreferredQueue;
     mapping(JobType => uint256[]) public jobTypeQueues;
+    mapping(uint256 => bool) public jobSettled;
 
     // Events (Consensys: comprehensive event logging)
     event JobCreated(uint256 indexed jobId, address indexed client, JobType jobType, uint256 payment, bool preferGreen);
@@ -132,6 +133,7 @@ contract JobManager is
     event DynamicPricingCalculated(uint256 indexed jobId, DynamicPricing pricing);
     event AIOptimizationApplied(uint256 indexed jobId, address[] recommendedNodes);
     event GreenNodePrioritized(uint256 indexed jobId, address indexed node);
+    event JobSettled(uint256 indexed jobId, address indexed node, uint256 amount);
 
     // @dev Constructor disabled for upgradeable contracts
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -260,6 +262,9 @@ contract JobManager is
 
         nodeJobs[selectedNode].push(jobId);
 
+        // Track active tasks on the node
+        try nodeRegistry.incrementActiveTasks(selectedNode) {} catch {}
+
         // Get metrics for event
         uint256 aiScore = aiOracle.nodeScores(selectedNode);
         uint256 greenMultiplier = greenVerifier.getRewardMultiplier(selectedNode);
@@ -295,6 +300,25 @@ contract JobManager is
 
         // Update node reputation based on completion
         nodeRegistry.updateReputation(msg.sender, true);
+
+        // Decrement active tasks counter safely
+        try nodeRegistry.decrementActiveTasks(msg.sender) {} catch {}
+    }
+
+    // @notice Settle job escrow to assigned node after successful completion
+    // @dev Callable by client or validators; prevents double payout
+    function settleJob(uint256 jobId) external whenNotPaused nonReentrant {
+        Job storage job = jobs[jobId];
+        require(job.status == JobStatus.COMPLETED, "Job not completed");
+        require(!jobSettled[jobId], "Already settled");
+        require(
+            msg.sender == job.client || hasRole(JOB_VALIDATOR_ROLE, msg.sender),
+            "Unauthorized to settle"
+        );
+
+        jobSettled[jobId] = true;
+        require(tachyonToken.transfer(job.assignedNode, job.payment), "Payout failed");
+        emit JobSettled(jobId, job.assignedNode, job.payment);
     }
 
     // @notice Cancel a job (by client or admin)
@@ -309,6 +333,11 @@ contract JobManager is
         require(tachyonToken.transfer(job.client, job.payment), "Refund failed");
 
         emit JobCancelled(jobId, job.client, reason);
+
+        // If was assigned, decrement active tasks for that node
+        if (job.assignedNode != address(0)) {
+            try nodeRegistry.decrementActiveTasks(job.assignedNode) {} catch {}
+        }
     }
 
     // @notice Get AI-optimized job recommendations for a node
@@ -387,7 +416,14 @@ contract JobManager is
             abi.encode(job.jobType, job.requirements, job.priority, job.preferGreenNodes, job.deadline);
 
         // Request AI prediction for optimal node selection
-        aiOracle.requestPrediction(AIOracle.PredictionType.NODE_SELECTION, bytes32(jobId), inputData);
+        // External call guarded with try/catch to avoid reverts bubbling
+        try aiOracle.requestPrediction(AIOracle.PredictionType.NODE_SELECTION, bytes32(jobId), inputData) returns (
+            bytes32 /* requestId */
+        ) {
+            // no-op
+        } catch {
+            // ignore oracle errors in job creation flow
+        }
     }
 
     function _calculateDynamicPricing(uint256, /* jobId */ Job memory job)
