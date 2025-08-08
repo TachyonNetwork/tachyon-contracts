@@ -97,6 +97,13 @@ contract JobManager is
         uint256 completedAt;
         bytes32 resultHash;
         bool usesEscrow; // when true, ComputeEscrow handles payout/refund
+        // Optional duplicate-audit flow
+        bool auditEnabled;
+        address auditNode;
+        uint256 auditAssignedAt;
+        bytes32 auditResultHash;
+        bool auditSubmitted;
+        bool auditMatch;
     }
 
     // AI-driven pricing structure
@@ -138,6 +145,9 @@ contract JobManager is
     event AIOptimizationApplied(uint256 indexed jobId, address[] recommendedNodes);
     event GreenNodePrioritized(uint256 indexed jobId, address indexed node);
     event JobSettled(uint256 indexed jobId, address indexed node, uint256 amount);
+    event JobAuditAssigned(uint256 indexed jobId, address indexed auditNode);
+    event JobAuditCompleted(uint256 indexed jobId, address indexed auditNode, bytes32 resultHash);
+    event JobAuditEvaluated(uint256 indexed jobId, bool matchResult);
 
     // @dev Constructor disabled for upgradeable contracts
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -221,7 +231,13 @@ contract JobManager is
             preferGreenNodes: preferGreenNodes,
             completedAt: 0,
             resultHash: bytes32(0),
-            usesEscrow: false
+            usesEscrow: false,
+            auditEnabled: false,
+            auditNode: address(0),
+            auditAssignedAt: 0,
+            auditResultHash: bytes32(0),
+            auditSubmitted: false,
+            auditMatch: false
         });
 
         // Update indices
@@ -277,7 +293,13 @@ contract JobManager is
             preferGreenNodes: preferGreenNodes,
             completedAt: 0,
             resultHash: bytes32(0),
-            usesEscrow: true
+            usesEscrow: true,
+            auditEnabled: false,
+            auditNode: address(0),
+            auditAssignedAt: 0,
+            auditResultHash: bytes32(0),
+            auditSubmitted: false,
+            auditMatch: false
         });
 
         clientJobs[msg.sender].push(jobId);
@@ -338,6 +360,20 @@ contract JobManager is
         if (job.preferGreenNodes && greenVerifier.isNodeGreen(selectedNode)) {
             emit GreenNodePrioritized(jobId, selectedNode);
         }
+
+        // Optional duplicate-audit: assign a second auditor node when enabled and available
+        if (job.auditEnabled && suitableNodes.length > 1) {
+            // pick a different node than selectedNode
+            address auditor = suitableNodes[0] == selectedNode && suitableNodes.length > 1
+                ? suitableNodes[1]
+                : suitableNodes[0];
+            if (auditor != selectedNode) {
+                job.auditNode = auditor;
+                job.auditAssignedAt = block.timestamp;
+                emit JobAuditAssigned(jobId, auditor);
+                try nodeRegistry.incrementActiveTasks(auditor) {} catch {}
+            }
+        }
     }
 
     // @notice Complete a job with result submission
@@ -347,25 +383,47 @@ contract JobManager is
         nonReentrant
     {
         Job storage job = jobs[jobId];
-        require(job.assignedNode == msg.sender, "Not assigned to caller");
+        require(job.assignedNode == msg.sender || job.auditNode == msg.sender, "Not assigned to caller");
         require(job.status == JobStatus.ASSIGNED || job.status == JobStatus.IN_PROGRESS, "Invalid status");
         require(resultHash != bytes32(0), "Invalid result hash");
         require(bytes(resultIpfsHash).length > 0, "Result IPFS hash required");
 
-        job.status = JobStatus.COMPLETED;
-        job.completedAt = block.timestamp;
-        job.resultHash = resultHash;
+        // If main worker submits
+        if (msg.sender == job.assignedNode) {
+            job.status = JobStatus.COMPLETED;
+            job.completedAt = block.timestamp;
+            job.resultHash = resultHash;
+            totalJobsCompleted++;
+            uint256 duration = block.timestamp - job.assignedAt;
+            emit JobCompleted(jobId, msg.sender, resultHash, duration);
+            nodeRegistry.updateReputation(msg.sender, true);
+            try nodeRegistry.decrementActiveTasks(msg.sender) {} catch {}
 
-        totalJobsCompleted++;
+            // If there is an auditor result already, evaluate
+            if (job.auditSubmitted) {
+                job.auditMatch = (job.auditResultHash == job.resultHash);
+                emit JobAuditEvaluated(jobId, job.auditMatch);
+                // Basic penalty: reduce reputation if mismatch
+                if (!job.auditMatch && job.auditNode != address(0)) {
+                    nodeRegistry.updateReputation(job.auditNode, false);
+                }
+            }
+        } else {
+            // Auditor submission
+            job.auditSubmitted = true;
+            job.auditResultHash = resultHash;
+            emit JobAuditCompleted(jobId, msg.sender, resultHash);
+            try nodeRegistry.decrementActiveTasks(msg.sender) {} catch {}
 
-        uint256 duration = block.timestamp - job.assignedAt;
-        emit JobCompleted(jobId, msg.sender, resultHash, duration);
-
-        // Update node reputation based on completion
-        nodeRegistry.updateReputation(msg.sender, true);
-
-        // Decrement active tasks counter safely
-        try nodeRegistry.decrementActiveTasks(msg.sender) {} catch {}
+            // If main result exists, evaluate now
+            if (job.resultHash != bytes32(0)) {
+                job.auditMatch = (job.auditResultHash == job.resultHash);
+                emit JobAuditEvaluated(jobId, job.auditMatch);
+                if (!job.auditMatch && job.assignedNode != address(0)) {
+                    nodeRegistry.updateReputation(job.assignedNode, false);
+                }
+            }
+        }
     }
 
     // @notice Settle job escrow to assigned node after successful completion
@@ -598,6 +656,13 @@ contract JobManager is
         if (_nodeRegistry != address(0)) nodeRegistry = NodeRegistry(_nodeRegistry);
         if (_aiOracle != address(0)) aiOracle = AIOracle(_aiOracle);
         if (_greenVerifier != address(0)) greenVerifier = GreenVerifier(_greenVerifier);
+    }
+
+    // Enable or disable duplicate audit for a specific job
+    function setJobAudit(uint256 jobId, bool enabled) external onlyRole(JOB_VALIDATOR_ROLE) {
+        Job storage job = jobs[jobId];
+        require(job.status == JobStatus.CREATED, "Invalid status");
+        job.auditEnabled = enabled;
     }
 
     function pause() external onlyRole(PAUSER_ROLE) {
