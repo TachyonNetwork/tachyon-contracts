@@ -9,6 +9,7 @@ import "../src/AIOracle.sol";
 import "../src/NodeRegistry.sol";
 import "../src/RewardManager.sol";
 import "../src/JobManager.sol";
+import "../src/ComputeEscrow.sol";
 
 // @title DeployTachyonSystem
 // @notice Comprehensive deployment script for all Tachyon Network contracts
@@ -39,6 +40,8 @@ contract DeployTachyonSystem is Script {
         address rewardManagerImpl;
         address jobManagerProxy;
         address jobManagerImpl;
+        address computeEscrowProxy;
+        address computeEscrowImpl;
     }
 
     function run() external {
@@ -158,6 +161,16 @@ contract DeployTachyonSystem is Script {
         ERC1967Proxy jobProxy = new ERC1967Proxy(address(jobImpl), jobInitData);
         contracts.jobManagerProxy = address(jobProxy);
 
+        // 7. Deploy ComputeEscrow (USDC placeholder address; update before mainnet)
+        console.log("Deploying ComputeEscrow...");
+        ComputeEscrow escrowImpl = new ComputeEscrow();
+        contracts.computeEscrowImpl = address(escrowImpl);
+
+        // For testnets, set token to TachyonToken or mock USDC; replace with USDC on prod
+        bytes memory escrowInit = abi.encodeWithSelector(ComputeEscrow.initialize.selector, contracts.tachyonTokenProxy, config.initialOwner);
+        ERC1967Proxy escrowProxy = new ERC1967Proxy(address(escrowImpl), escrowInit);
+        contracts.computeEscrowProxy = address(escrowProxy);
+
         return contracts;
     }
 
@@ -195,6 +208,12 @@ contract DeployTachyonSystem is Script {
         greenVerifier.grantRole(greenVerifier.ORACLE_ROLE(), config.initialOwner);
         console.log("Granted ORACLE_ROLE to deployer");
 
+        // Wire ComputeEscrow permissions and set in JobManager
+        ComputeEscrow escrow = ComputeEscrow(contracts.computeEscrowProxy);
+        escrow.grantRole(escrow.JOB_MANAGER_ROLE(), contracts.jobManagerProxy);
+        JobManager(contracts.jobManagerProxy).setComputeEscrow(contracts.computeEscrowProxy);
+        console.log("ComputeEscrow configured and linked to JobManager");
+
         console.log("Contract dependencies initialized successfully");
     }
 
@@ -212,5 +231,7 @@ contract DeployTachyonSystem is Script {
         console.log("RewardManager Implementation:", contracts.rewardManagerImpl);
         console.log("JobManager Proxy:", contracts.jobManagerProxy);
         console.log("JobManager Implementation:", contracts.jobManagerImpl);
+        console.log("ComputeEscrow Proxy:", contracts.computeEscrowProxy);
+        console.log("ComputeEscrow Implementation:", contracts.computeEscrowImpl);
     }
 }

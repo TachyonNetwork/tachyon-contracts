@@ -11,6 +11,7 @@ import "./TachyonToken.sol";
 import "./NodeRegistry.sol";
 import "./AIOracle.sol";
 import "./GreenVerifier.sol";
+import "./ComputeEscrow.sol";
 
 // @title JobManager
 // @notice Advanced job management with AI-powered task distribution and green energy prioritization
@@ -34,6 +35,7 @@ contract JobManager is
     NodeRegistry public nodeRegistry;
     AIOracle public aiOracle;
     GreenVerifier public greenVerifier;
+    ComputeEscrow public computeEscrow; // optional USDC-based escrow
 
     // Job types for AI optimization
     enum JobType {
@@ -192,7 +194,7 @@ contract JobManager is
         require(bytes(ipfsHash).length > 0, "IPFS hash required");
         require(requirements.estimatedDurationMinutes > 0, "Duration required");
 
-        // Transfer payment to contract
+        // Transfer payment to contract (TACH path). If computeEscrow is set, users may choose USDC off-chain escrow flow.
         require(tachyonToken.transferFrom(msg.sender, address(this), payment), "Payment transfer failed");
 
         jobId = nextJobId++;
@@ -233,6 +235,11 @@ contract JobManager is
         _requestAIOptimization(jobId);
 
         return jobId;
+    }
+
+    // Optional: set external USDC escrow contract
+    function setComputeEscrow(address escrow) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        computeEscrow = ComputeEscrow(escrow);
     }
 
     // @notice AI-powered job assignment to optimal nodes
@@ -311,10 +318,7 @@ contract JobManager is
         Job storage job = jobs[jobId];
         require(job.status == JobStatus.COMPLETED, "Job not completed");
         require(!jobSettled[jobId], "Already settled");
-        require(
-            msg.sender == job.client || hasRole(JOB_VALIDATOR_ROLE, msg.sender),
-            "Unauthorized to settle"
-        );
+        require(msg.sender == job.client || hasRole(JOB_VALIDATOR_ROLE, msg.sender), "Unauthorized to settle");
 
         jobSettled[jobId] = true;
         require(tachyonToken.transfer(job.assignedNode, job.payment), "Payout failed");
