@@ -61,6 +61,24 @@ contract ComputeEscrow is
         _grantRole(ESCROW_ADMIN_ROLE, initialOwner);
     }
 
+    // Views
+    function getEscrow(uint256 jobId)
+        external
+        view
+        returns (address payer, address payee, uint256 amount, bool funded, bool released, bool refunded)
+    {
+        Escrow storage e = escrows[jobId];
+        return (e.payer, e.payee, e.amount, e.funded, e.released, e.refunded);
+    }
+
+    function isFunded(uint256 jobId) external view returns (bool) {
+        return escrows[jobId].funded;
+    }
+
+    function amountOf(uint256 jobId) external view returns (uint256) {
+        return escrows[jobId].amount;
+    }
+
     function createEscrow(uint256 jobId, address payer, uint256 amount)
         external
         whenNotPaused
